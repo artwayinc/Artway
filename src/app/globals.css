@@ -1142,6 +1142,44 @@ html[data-theme="dark"] .logo {
   white-space: pre-wrap;
 }
 
+.admin-messages__pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.admin-messages__pagination-button {
+  padding: 8px 16px;
+  background: var(--background);
+  border: 1px solid var(--line);
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.admin-messages__pagination-button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--background);
+  border-color: var(--accent);
+}
+
+.admin-messages__pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-messages__pagination-info {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .admin-messages__container {
     grid-template-columns: 1fr;

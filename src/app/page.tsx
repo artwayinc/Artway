@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getImagePath } from "@/lib/paths";
 
 export const metadata: Metadata = {
@@ -49,9 +50,9 @@ export default function Home() {
             White glove delivery, packing, storage, and installation for
             galleries, collectors, and institutions across the United States.
           </p>
-          <a className="button" href="/quote-request">
+          <Link className="button" href="/quote-request">
             Request a Quote
-          </a>
+          </Link>
         </div>
       </section>
 

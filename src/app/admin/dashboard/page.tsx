@@ -237,10 +237,22 @@ function MessagesTab() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     loadMessages();
   }, []);
+
+  // Вычисляем значения для пагинации
+  const totalPages = Math.ceil(messages.length / itemsPerPage);
+  
+  // Сбрасываем на первую страницу, если текущая страница больше доступных
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   async function loadMessages() {
     try {
@@ -281,6 +293,11 @@ function MessagesTab() {
       if (selectedMessage?.id === id) {
         setSelectedMessage(null);
       }
+      // Если текущая страница стала пустой, переходим на предыдущую
+      const totalPages = Math.ceil((messages.length - 1) / itemsPerPage);
+      if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+      }
     } catch (error) {
       console.error("Error deleting message:", error);
       alert("Error deleting message");
@@ -292,6 +309,9 @@ function MessagesTab() {
   }
 
   const unreadCount = messages.filter((m) => !m.read).length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMessages = messages.slice(startIndex, endIndex);
 
   return (
     <div className="admin-messages">
@@ -307,7 +327,8 @@ function MessagesTab() {
           {messages.length === 0 ? (
             <p className="admin-messages__empty">No messages yet</p>
           ) : (
-            messages.map((message) => (
+            <>
+              {paginatedMessages.map((message) => (
               <div
                 key={message.id}
                 className={`admin-messages__item ${!message.read ? "admin-messages__item--unread" : ""} ${selectedMessage?.id === message.id ? "admin-messages__item--selected" : ""}`}
@@ -333,7 +354,29 @@ function MessagesTab() {
                   })}
                 </div>
               </div>
-            ))
+              ))}
+              {totalPages > 1 && (
+                <div className="admin-messages__pagination">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="admin-messages__pagination-button"
+                  >
+                    Previous
+                  </button>
+                  <div className="admin-messages__pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="admin-messages__pagination-button"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 

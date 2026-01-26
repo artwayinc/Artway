@@ -5,10 +5,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Если репозиторий называется Artway, то basePath не нужен
-  // Если репозиторий называется artwayinc.github.io, то basePath тоже не нужен
-  // Если репозиторий называется Artway и будет доступен по адресу artwayinc.github.io/Artway, то нужен basePath: '/Artway'
-  // basePath: process.env.NODE_ENV === 'production' ? '/Artway' : '',
+  // Репозиторий называется Artway, поэтому нужен basePath
+  basePath: process.env.GITHUB_ACTIONS ? '/Artway' : '',
   trailingSlash: true,
 };
 

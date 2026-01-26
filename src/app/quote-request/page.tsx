@@ -4,7 +4,24 @@ import QuoteForm from "@/components/QuoteForm";
 export const metadata: Metadata = {
   title: "Quote Request | Artway Fine Art Services",
   description:
-    "Request a quote for fine art shipping, handling, storage, and installation services.",
+    "Request a quote for fine art shipping, handling, storage, and installation services. Get competitive pricing for one-way or round-trip delivery.",
+  keywords: [
+    "fine art shipping quote",
+    "art transportation quote",
+    "art logistics quote",
+    "art shipping cost",
+    "fine art handling quote",
+    "art storage quote",
+  ],
+  alternates: {
+    canonical: "/quote-request",
+  },
+  openGraph: {
+    title: "Quote Request | Artway Fine Art Services",
+    description:
+      "Request a quote for fine art shipping, handling, storage, and installation services.",
+    type: "website",
+  },
 };
 
 export default function QuoteRequestPage() {

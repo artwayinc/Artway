@@ -4,7 +4,31 @@ import { getImagePath } from "@/lib/paths";
 export const metadata: Metadata = {
   title: "Artway Fine Art Services | Fine Art Shipping & Handling",
   description:
-    "White glove fine art shipping, handling, packing, storage, and installation across the United States.",
+    "White glove fine art shipping, handling, packing, storage, and installation across the United States. Since 1995, serving galleries, collectors, and institutions nationwide.",
+  keywords: [
+    "fine art shipping",
+    "fine art logistics",
+    "fine art transportation",
+    "fine art handling",
+    "white glove delivery",
+    "art packing",
+    "art storage",
+    "art installation",
+    "art transportation New York",
+    "fine art shipping New York",
+    "art logistics NYC",
+    "museum art transport",
+    "gallery art transport",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Artway Fine Art Services | Fine Art Shipping & Handling",
+    description:
+      "White glove fine art shipping, handling, packing, storage, and installation across the United States.",
+    type: "website",
+  },
 };
 
 export default function Home() {

@@ -6,7 +6,24 @@ const CURRENT_YEAR = new Date().getFullYear();
 export const metadata: Metadata = {
   title: "Event Schedule | Artway Fine Art Services",
   description:
-    "Upcoming art fairs and event schedule for Artway Fine Art Services.",
+    "Upcoming art fairs and event schedule for Artway Fine Art Services. Plan your fine art shipping and handling needs for major shows and exhibitions.",
+  keywords: [
+    "art fair schedule",
+    "art exhibition schedule",
+    "antique show schedule",
+    "fine art event calendar",
+    "art show logistics",
+    "exhibition shipping",
+  ],
+  alternates: {
+    canonical: "/schedule",
+  },
+  openGraph: {
+    title: "Event Schedule | Artway Fine Art Services",
+    description:
+      "Upcoming art fairs and event schedule for Artway Fine Art Services.",
+    type: "website",
+  },
 };
 
 export default function SchedulePage() {

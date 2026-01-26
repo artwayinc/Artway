@@ -5,7 +5,28 @@ import { getImagePath } from "@/lib/paths";
 export const metadata: Metadata = {
   title: "Services | Artway Fine Art Services",
   description:
-    "Fine art logistics services including shipping, packing, crating, storage, white glove delivery, and restoration.",
+    "Fine art logistics services including shipping, packing, crating, storage, white glove delivery, and restoration. Specializing in shows, exhibitions, and auction house services.",
+  keywords: [
+    "fine art shipping services",
+    "art packing and crating",
+    "art storage services",
+    "white glove delivery",
+    "art installation services",
+    "auction house services",
+    "art restoration",
+    "shows and exhibitions",
+    "fine art logistics",
+    "art transportation services",
+  ],
+  alternates: {
+    canonical: "/services",
+  },
+  openGraph: {
+    title: "Services | Artway Fine Art Services",
+    description:
+      "Fine art logistics services including shipping, packing, crating, storage, white glove delivery, and restoration.",
+    type: "website",
+  },
 };
 
 const services = [

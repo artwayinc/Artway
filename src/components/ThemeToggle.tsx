@@ -44,11 +44,23 @@ function getInitialTheme(): Theme {
 }
 
 export default function ThemeToggle() {
-  // Используем lazy initialization для правильной инициализации на клиенте
-  const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
+  // На сервере всегда "light", на клиенте обновим после монтирования
+  const [theme, setTheme] = useState<Theme>("light");
+  const [mounted, setMounted] = useState(false);
 
-  // Применяем тему к DOM при монтировании и изменении
+  // Инициализируем тему на клиенте после монтирования
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    const initialTheme = getInitialTheme();
+    setTheme(initialTheme);
+    document.documentElement.setAttribute("data-theme", initialTheme);
+  }, []);
+
+  // Применяем тему к DOM при изменении
+  useEffect(() => {
+    if (!mounted) return;
+
     document.documentElement.setAttribute("data-theme", theme);
 
     // Обновляем тему каждый час и при изменении даты
@@ -79,7 +91,7 @@ export default function ThemeToggle() {
       clearInterval(interval);
       clearInterval(checkDateChange);
     };
-  }, [theme]);
+  }, [theme, mounted]);
 
   function toggleTheme() {
     const nextTheme: Theme = theme === "light" ? "dark" : "light";
@@ -113,6 +125,7 @@ export default function ThemeToggle() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          suppressHydrationWarning
         >
           <circle cx="12" cy="12" r="5"></circle>
           <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -135,6 +148,7 @@ export default function ThemeToggle() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          suppressHydrationWarning
         >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>

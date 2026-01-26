@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getSchedule } from "@/lib/db";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const metadata: Metadata = {
   title: "Event Schedule | Artway Fine Art Services",
   description:
@@ -12,7 +14,7 @@ export default function SchedulePage() {
   return (
     <section className="section">
       <div className="container">
-        <h1 className="section__title">2025 Event Schedule</h1>
+        <h1 className="section__title">{CURRENT_YEAR} Event Schedule</h1>
         <div className="schedule">
           {events.map((event) => (
             <div key={event.id} className="schedule__item">

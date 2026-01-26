@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { getImagePath } from "@/lib/paths";
 
 export const metadata: Metadata = {
   title: "Services | Artway Fine Art Services",
@@ -62,7 +63,7 @@ export default function ServicesPage() {
             <article key={service.title} className="card">
               <div className="card__image-wrapper">
                 <Image
-                  src={service.image}
+                  src={getImagePath(service.image)}
                   alt={service.title}
                   width={400}
                   height={300}

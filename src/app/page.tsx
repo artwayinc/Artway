@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getImagePath } from "@/lib/paths";
 
 export const metadata: Metadata = {
   title: "Artway Fine Art Services | Fine Art Shipping & Handling",
@@ -7,9 +8,16 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
+  const heroBgImage = getImagePath("/main.png");
+  
   return (
     <>
-      <section className="hero">
+      <section 
+        className="hero"
+        style={{
+          background: `linear-gradient(var(--hero-overlay), var(--hero-overlay)), url("${heroBgImage}") center/cover no-repeat`
+        }}
+      >
         <div className="container hero__content">
           <p className="hero__eyebrow">Since 1995</p>
           <h1 className="hero__title">Fine Art Shipping & Handling</h1>

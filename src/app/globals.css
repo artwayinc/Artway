@@ -253,9 +253,7 @@ html[data-theme="dark"] .logo {
 }
 
 .hero {
-  background:
-    linear-gradient(var(--hero-overlay), var(--hero-overlay)),
-    url("/main.png") center/cover no-repeat;
+  /* Background image is set via inline style to support basePath */
   min-height: 91vh;
   display: flex;
   align-items: center;

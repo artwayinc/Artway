@@ -1,5 +1,9 @@
 import { MetadataRoute } from 'next';
 
+// Делаем маршрут sitemap полностью статическим,
+// чтобы он поддерживал output: "export" (GitHub Pages)
+export const dynamic = 'force-static';
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://artwayinc.com';
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';

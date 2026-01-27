@@ -67,6 +67,14 @@ jobs:
             find out -name "*.html" | head -5
           fi
 
+      - name: Ensure favicon in Artway output
+        run: |
+          if [ -f "public/favicon.ico" ]; then
+            mkdir -p out/Artway
+            cp public/favicon.ico out/Artway/favicon.ico
+            echo "✓ favicon.ico copied to out/Artway/"
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

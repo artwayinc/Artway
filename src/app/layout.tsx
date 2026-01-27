@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     "new york",
   ],
   icons: {
-    icon: "/favicon.ico",
+    icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/favicon.ico`,
   },
   openGraph: {
     title: "Artway Fine Art Services",

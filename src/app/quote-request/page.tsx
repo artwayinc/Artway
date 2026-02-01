@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import QuoteForm from "@/components/QuoteForm";
+import { getImagePath } from "@/lib/paths";
 
 export const metadata: Metadata = {
   title: "Quote Request | Artway Fine Art Services",
@@ -60,7 +61,7 @@ export default function QuoteRequestPage() {
             </p>
             <div className="quote__qrImageWrap">
               <Image
-                src="/qr.jpeg"
+                src={getImagePath("/qr.jpeg")}
                 alt="Artway QR code"
                 width={320}
                 height={320}

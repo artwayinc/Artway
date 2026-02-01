@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import {
-  getSchedule,
-  addEvent,
-  updateEvent,
-  deleteEvent,
-} from "@/lib/db";
+import { getSchedule, addEvent, updateEvent, deleteEvent } from "@/lib/db";
 
 export async function GET() {
   const events = getSchedule();
@@ -19,21 +14,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { date, name, location } = body;
+    const { date, name, location, url } = body;
 
     if (!name) {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    const newEvent = addEvent({ date: date || "", name, location: location || "" });
+    const urlValue = typeof url === "string" ? url.trim() : "";
+    const newEvent = addEvent({
+      date: date || "",
+      name,
+      location: location || "",
+      ...(urlValue ? { url: urlValue } : {}),
+    });
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -45,13 +43,20 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, date, name, location } = body;
+    const { id, date, name, location, url } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const updated = updateEvent(id, { date, name, location });
+    const urlValue = typeof url === "string" ? url.trim() : "";
+    const updated = updateEvent(id, {
+      date,
+      name,
+      location,
+      // Если url пустой — убираем поле (не храним пустые строки)
+      url: urlValue || undefined,
+    });
     if (!updated) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
@@ -60,7 +65,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -87,7 +92,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

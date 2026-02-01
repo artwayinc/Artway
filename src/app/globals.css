@@ -6,6 +6,8 @@
   --accent: #1f1f1f;
   --surface: #f7f7f7;
   --hero-overlay: rgba(255, 255, 255, 0.88);
+  /* Display font for headings (requested: Allerta Stencil / or Lato) */
+  --font-display: var(--font-allerta-stencil);
 }
 
 html[data-theme="dark"] {
@@ -115,6 +117,23 @@ html[data-theme="dark"] .logo {
   align-items: center;
   gap: 16px;
   z-index: 12;
+}
+
+.header__phone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  background: var(--background);
+  color: var(--foreground);
+  transition: all 0.2s ease;
+}
+
+.header__phone:hover {
+  border-color: var(--accent);
+  background: var(--surface);
 }
 
 .burger-button {
@@ -278,16 +297,24 @@ html[data-theme="dark"] .logo {
 }
 
 .hero__title {
-  font-family: var(--font-playfair), "Times New Roman", serif;
+  font-family:
+    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
   font-size: clamp(2.4rem, 4vw, 3.8rem);
   letter-spacing: 0.05em;
   margin-bottom: 16px;
+  white-space: nowrap;
 }
 
 .hero__subtitle {
   color: var(--muted);
   font-size: 1.1rem;
   margin-bottom: 32px;
+}
+
+.hero__subtitle--lead {
+  margin-bottom: 10px;
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 .button {
@@ -322,7 +349,8 @@ html[data-theme="dark"] .logo {
 }
 
 .section__title {
-  font-family: var(--font-playfair), "Times New Roman", serif;
+  font-family:
+    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
   font-size: clamp(1.8rem, 3vw, 2.6rem);
   letter-spacing: 0.04em;
   margin-bottom: 24px;
@@ -331,12 +359,69 @@ html[data-theme="dark"] .logo {
 .section__text {
   color: var(--muted);
   margin-bottom: 18px;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 
 .cards {
   display: grid;
   gap: 20px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.clients__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0 28px;
+}
+
+.clients__actions .button[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.clients__grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.review {
+  border: 1px solid var(--line);
+  background: var(--background);
+  padding: 20px;
+}
+
+.review__stars {
+  color: #c02f3b;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.review__title {
+  font-family:
+    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.review__text {
+  color: var(--muted);
+  margin-bottom: 14px;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+}
+
+.review__author {
+  font-weight: 600;
+}
+
+.review__meta {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .card {
@@ -368,7 +453,8 @@ html[data-theme="dark"] .logo {
 }
 
 .card__title {
-  font-family: var(--font-playfair), "Times New Roman", serif;
+  font-family:
+    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
   font-size: 1.2rem;
   margin-bottom: 12px;
   padding: 24px 24px 0;
@@ -378,6 +464,9 @@ html[data-theme="dark"] .logo {
   color: var(--muted);
   padding: 0 24px 24px;
   flex: 1;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 
 .schedule {
@@ -407,6 +496,16 @@ html[data-theme="dark"] .logo {
   font-weight: 600;
 }
 
+.schedule__link {
+  display: inline-block;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.schedule__link:hover {
+  color: var(--accent);
+}
+
 .schedule__location {
   color: var(--muted);
 }
@@ -423,6 +522,16 @@ html[data-theme="dark"] .logo {
   color: var(--muted);
 }
 
+.quote__contact a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.quote__contact a:hover {
+  color: var(--foreground);
+}
+
 .quote__qr {
   margin-top: 20px;
   border: 1px solid var(--line);
@@ -431,7 +540,8 @@ html[data-theme="dark"] .logo {
 }
 
 .quote__qrTitle {
-  font-family: var(--font-playfair), "Times New Roman", serif;
+  font-family:
+    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
   font-size: 1.1rem;
   letter-spacing: 0.04em;
   margin-bottom: 8px;
@@ -484,6 +594,31 @@ html[data-theme="dark"] .logo {
   color: var(--foreground);
 }
 
+.form__field select {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.form__inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form__inline input {
+  flex: 1;
+  min-width: 0;
+}
+
+.form__inline select {
+  width: 88px;
+  flex: 0 0 auto;
+}
+
 .form__field--full {
   grid-column: 1 / -1;
 }
@@ -519,6 +654,16 @@ html[data-theme="dark"] .logo {
   color: var(--muted);
   display: grid;
   gap: 6px;
+}
+
+.footer__contact a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer__contact a:hover {
+  color: var(--foreground);
 }
 
 .footer__social {
@@ -635,6 +780,10 @@ html[data-theme="dark"] .logo {
     font-size: 1rem;
   }
 
+  .hero__title {
+    white-space: normal;
+  }
+
   .section {
     padding: 48px 0;
   }
@@ -645,6 +794,9 @@ html[data-theme="dark"] .logo {
 
   .section__text {
     font-size: 0.95rem;
+    /* На узких экранах justify часто выглядит плохо */
+    text-align: left;
+    hyphens: manual;
   }
 
   .form__grid {
@@ -658,6 +810,11 @@ html[data-theme="dark"] .logo {
 
   .cards {
     grid-template-columns: 1fr;
+  }
+
+  .review__text {
+    text-align: left;
+    hyphens: manual;
   }
 
   .card__image-wrapper {
@@ -689,6 +846,7 @@ html[data-theme="dark"] .logo {
 
   .hero__title {
     font-size: 2rem;
+    white-space: normal;
   }
 
   .section {

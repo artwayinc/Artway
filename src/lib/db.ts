@@ -3,12 +3,14 @@ import path from "path";
 
 const dataDir = path.join(process.cwd(), "data");
 const scheduleFile = path.join(dataDir, "schedule.json");
+const reviewsFile = path.join(dataDir, "reviews.json");
 
 export interface ScheduleEvent {
   id: string;
   date: string;
   name: string;
   location: string;
+  url?: string;
 }
 
 export function getSchedule(): ScheduleEvent[] {
@@ -17,7 +19,9 @@ export function getSchedule(): ScheduleEvent[] {
       return [];
     }
     const data = fs.readFileSync(scheduleFile, "utf-8");
-    return JSON.parse(data);
+    const parsed = JSON.parse(data) as unknown;
+    // Делаем поле url опциональным для обратной совместимости
+    return Array.isArray(parsed) ? (parsed as ScheduleEvent[]) : [];
   } catch (error) {
     console.error("Error reading schedule:", error);
     return [];
@@ -50,7 +54,10 @@ export function addEvent(event: Omit<ScheduleEvent, "id">): ScheduleEvent {
   return newEvent;
 }
 
-export function updateEvent(id: string, event: Partial<ScheduleEvent>): ScheduleEvent | null {
+export function updateEvent(
+  id: string,
+  event: Partial<ScheduleEvent>,
+): ScheduleEvent | null {
   const events = getSchedule();
   const index = events.findIndex((e) => e.id === id);
   if (index === -1) {
@@ -111,7 +118,9 @@ export function saveMessages(messages: ContactMessage[]): void {
   }
 }
 
-export function addMessage(message: Omit<ContactMessage, "id" | "createdAt" | "read">): ContactMessage {
+export function addMessage(
+  message: Omit<ContactMessage, "id" | "createdAt" | "read">,
+): ContactMessage {
   const messages = getMessages();
   const newId = String(Date.now());
   const newMessage: ContactMessage = {
@@ -143,5 +152,75 @@ export function deleteMessage(id: string): boolean {
     return false;
   }
   saveMessages(filtered);
+  return true;
+}
+
+// Reviews functions
+export interface Review {
+  id: string;
+  rating: number; // 1..5
+  title: string;
+  text: string;
+  author: string;
+  role: string;
+  location: string;
+}
+
+export function getReviews(): Review[] {
+  try {
+    if (!fs.existsSync(reviewsFile)) {
+      return [];
+    }
+    const data = fs.readFileSync(reviewsFile, "utf-8");
+    const parsed = JSON.parse(data) as unknown;
+    return Array.isArray(parsed) ? (parsed as Review[]) : [];
+  } catch (error) {
+    console.error("Error reading reviews:", error);
+    return [];
+  }
+}
+
+export function saveReviews(reviews: Review[]): void {
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.writeFileSync(reviewsFile, JSON.stringify(reviews, null, 2), "utf-8");
+  } catch (error) {
+    console.error("Error saving reviews:", error);
+    throw error;
+  }
+}
+
+export function addReview(review: Omit<Review, "id">): Review {
+  const reviews = getReviews();
+  const newId = String(Date.now());
+  const newReview: Review = { ...review, id: newId };
+  reviews.unshift(newReview);
+  saveReviews(reviews);
+  return newReview;
+}
+
+export function updateReview(
+  id: string,
+  review: Partial<Review>,
+): Review | null {
+  const reviews = getReviews();
+  const index = reviews.findIndex((r) => r.id === id);
+  if (index === -1) {
+    return null;
+  }
+  reviews[index] = { ...reviews[index], ...review, id };
+  saveReviews(reviews);
+  return reviews[index];
+}
+
+export function deleteReview(id: string): boolean {
+  const reviews = getReviews();
+  const filtered = reviews.filter((r) => r.id !== id);
+  if (filtered.length === reviews.length) {
+    return false;
+  }
+  saveReviews(filtered);
   return true;
 }

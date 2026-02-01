@@ -40,9 +40,15 @@ export default function QuoteRequestPage() {
             planning.
           </p>
           <div className="quote__contact">
-            <p>Email: info@artwayinc.com</p>
-            <p>Phone: (855) 5-ARTWAY</p>
-            <p>Phone: (718) 213-6886</p>
+            <p>
+              Email: <a href="mailto:info@artwayinc.com">info@artwayinc.com</a>
+            </p>
+            <p>
+              Phone: <a href="tel:+18555278929">(855) 5-ARTWAY</a>
+            </p>
+            <p>
+              Phone: <a href="tel:+17182136886">(718) 213-6886</a>
+            </p>
           </div>
         </div>
         <div className="quote__form">

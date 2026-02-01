@@ -8,6 +8,7 @@ const navItems = [
   { href: "/", label: "Home" },
   { href: "/services", label: "Services" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/clients-and-projects", label: "Clients & Projects" },
   { href: "/quote-request", label: "Quote Request" },
 ];
 
@@ -75,7 +76,9 @@ export default function SiteHeader() {
         </Link>
         <nav className="nav" aria-label="Main navigation">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
@@ -88,6 +91,25 @@ export default function SiteHeader() {
           })}
         </nav>
         <div className="header__actions">
+          <a
+            className="header__phone"
+            href="tel:+17182136886"
+            aria-label="Call +1 718 213 6886"
+            title="+1 718 213 6886"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 5.2 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L9 10.9a16 16 0 0 0 4.1 4.1l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2z" />
+            </svg>
+          </a>
           <button
             className="burger-button"
             onClick={toggleMobileMenu}
@@ -108,7 +130,9 @@ export default function SiteHeader() {
           aria-label="Mobile navigation"
         >
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}

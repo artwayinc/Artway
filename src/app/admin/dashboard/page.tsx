@@ -6,9 +6,17 @@ import type { ScheduleEvent } from "@/lib/db";
 import type { ContactMessage } from "@/lib/db";
 
 type Tab = "schedule" | "messages";
+type ReviewForm = {
+  title: string;
+  text: string;
+  author: string;
+  role: string;
+  location: string;
+  rating: string;
+};
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("schedule");
+  const [activeTab, setActiveTab] = useState<Tab | "reviews">("schedule");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -20,7 +28,7 @@ export default function AdminDashboardPage() {
     try {
       const response = await fetch("/api/auth/check");
       const data = await response.json();
-      
+
       if (!data.authenticated) {
         router.push("/admin");
         return;
@@ -68,10 +76,17 @@ export default function AdminDashboardPage() {
         >
           Messages
         </button>
+        <button
+          className={`admin-tabs__tab ${activeTab === "reviews" ? "admin-tabs__tab--active" : ""}`}
+          onClick={() => setActiveTab("reviews")}
+        >
+          Reviews
+        </button>
       </div>
 
       {activeTab === "schedule" && <ScheduleTab />}
       {activeTab === "messages" && <MessagesTab />}
+      {activeTab === "reviews" && <ReviewsTab />}
     </div>
   );
 }
@@ -80,7 +95,12 @@ function ScheduleTab() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ date: "", name: "", location: "" });
+  const [formData, setFormData] = useState({
+    date: "",
+    name: "",
+    location: "",
+    url: "",
+  });
 
   useEffect(() => {
     loadEvents();
@@ -115,7 +135,7 @@ function ScheduleTab() {
       }
       await loadEvents();
       setEditingId(null);
-      setFormData({ date: "", name: "", location: "" });
+      setFormData({ date: "", name: "", location: "", url: "" });
     } catch (error) {
       console.error("Error saving event:", error);
       alert("Error saving event");
@@ -150,7 +170,9 @@ function ScheduleTab() {
             <input
               type="text"
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
               placeholder="e.g., Jan 9 - 13"
             />
           </div>
@@ -159,7 +181,9 @@ function ScheduleTab() {
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Event name"
               required
             />
@@ -169,20 +193,36 @@ function ScheduleTab() {
             <input
               type="text"
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, location: e.target.value })
+              }
               placeholder="Event location"
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Event URL (optional)</label>
+            <input
+              type="url"
+              value={formData.url}
+              onChange={(e) =>
+                setFormData({ ...formData, url: e.target.value })
+              }
+              placeholder="https://..."
             />
           </div>
         </div>
         <div className="admin-schedule__form-actions">
-          <button onClick={handleSave} className="admin-schedule__button admin-schedule__button--primary">
+          <button
+            onClick={handleSave}
+            className="admin-schedule__button admin-schedule__button--primary"
+          >
             {editingId ? "Update" : "Add"} Event
           </button>
           {editingId && (
             <button
               onClick={() => {
                 setEditingId(null);
-                setFormData({ date: "", name: "", location: "" });
+                setFormData({ date: "", name: "", location: "", url: "" });
               }}
               className="admin-schedule__button"
             >
@@ -204,7 +244,9 @@ function ScheduleTab() {
                 <div className="admin-schedule__event-info">
                   <div className="admin-schedule__event-name">{event.name}</div>
                   {event.location && (
-                    <div className="admin-schedule__event-location">{event.location}</div>
+                    <div className="admin-schedule__event-location">
+                      {event.location}
+                    </div>
                   )}
                 </div>
               </div>
@@ -212,7 +254,12 @@ function ScheduleTab() {
                 <button
                   onClick={() => {
                     setEditingId(event.id);
-                    setFormData({ date: event.date, name: event.name, location: event.location });
+                    setFormData({
+                      date: event.date,
+                      name: event.name,
+                      location: event.location,
+                      url: event.url ?? "",
+                    });
                   }}
                   className="admin-schedule__button admin-schedule__button--small"
                 >
@@ -236,7 +283,9 @@ function ScheduleTab() {
 function MessagesTab() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -246,7 +295,7 @@ function MessagesTab() {
 
   // Вычисляем значения для пагинации
   const totalPages = Math.ceil(messages.length / itemsPerPage);
-  
+
   // Сбрасываем на первую страницу, если текущая страница больше доступных
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
@@ -329,36 +378,44 @@ function MessagesTab() {
           ) : (
             <>
               {paginatedMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`admin-messages__item ${!message.read ? "admin-messages__item--unread" : ""} ${selectedMessage?.id === message.id ? "admin-messages__item--selected" : ""}`}
-                onClick={() => {
-                  setSelectedMessage(message);
-                  if (!message.read) {
-                    handleMarkAsRead(message.id);
-                  }
-                }}
-              >
-                <div className="admin-messages__item-header">
-                  <div className="admin-messages__item-name">{message.name}</div>
-                  {!message.read && <span className="admin-messages__item-dot"></span>}
+                <div
+                  key={message.id}
+                  className={`admin-messages__item ${!message.read ? "admin-messages__item--unread" : ""} ${selectedMessage?.id === message.id ? "admin-messages__item--selected" : ""}`}
+                  onClick={() => {
+                    setSelectedMessage(message);
+                    if (!message.read) {
+                      handleMarkAsRead(message.id);
+                    }
+                  }}
+                >
+                  <div className="admin-messages__item-header">
+                    <div className="admin-messages__item-name">
+                      {message.name}
+                    </div>
+                    {!message.read && (
+                      <span className="admin-messages__item-dot"></span>
+                    )}
+                  </div>
+                  <div className="admin-messages__item-subject">
+                    {message.subject}
+                  </div>
+                  <div className="admin-messages__item-date">
+                    {new Date(message.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
                 </div>
-                <div className="admin-messages__item-subject">{message.subject}</div>
-                <div className="admin-messages__item-date">
-                  {new Date(message.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-              </div>
               ))}
               {totalPages > 1 && (
                 <div className="admin-messages__pagination">
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
                     disabled={currentPage === 1}
                     className="admin-messages__pagination-button"
                   >
@@ -368,7 +425,9 @@ function MessagesTab() {
                     Page {currentPage} of {totalPages}
                   </div>
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
                     disabled={currentPage === totalPages}
                     className="admin-messages__pagination-button"
                   >
@@ -392,16 +451,299 @@ function MessagesTab() {
               </button>
             </div>
             <div className="admin-messages__detail-info">
-              <p><strong>From:</strong> {selectedMessage.name}</p>
-              <p><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a></p>
-              <p><strong>Phone:</strong> +{selectedMessage.phoneCountry} {selectedMessage.phone}</p>
-              <p><strong>Date:</strong> {new Date(selectedMessage.createdAt).toLocaleString("en-US")}</p>
+              <p>
+                <strong>From:</strong> {selectedMessage.name}
+              </p>
+              <p>
+                <strong>Email:</strong>{" "}
+                <a href={`mailto:${selectedMessage.email}`}>
+                  {selectedMessage.email}
+                </a>
+              </p>
+              <p>
+                <strong>Phone:</strong> +{selectedMessage.phoneCountry}{" "}
+                {selectedMessage.phone}
+              </p>
+              <p>
+                <strong>Date:</strong>{" "}
+                {new Date(selectedMessage.createdAt).toLocaleString("en-US")}
+              </p>
             </div>
             <div className="admin-messages__detail-message">
               <p>{selectedMessage.message}</p>
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+type ReviewItem = {
+  id: string;
+  rating: number;
+  title: string;
+  text: string;
+  author: string;
+  role: string;
+  location: string;
+};
+
+function ReviewsTab() {
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ReviewForm>({
+    title: "",
+    text: "",
+    author: "",
+    role: "",
+    location: "",
+    rating: "5",
+  });
+
+  useEffect(() => {
+    loadReviews();
+  }, []);
+
+  async function loadReviews() {
+    try {
+      const response = await fetch("/api/reviews");
+      const data = await response.json();
+      setReviews(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error loading reviews:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    try {
+      const payload = {
+        ...formData,
+        rating: Number(formData.rating || 5),
+      };
+
+      if (editingId) {
+        await fetch("/api/reviews", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingId, ...payload }),
+        });
+      } else {
+        await fetch("/api/reviews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      await loadReviews();
+      setEditingId(null);
+      setFormData({
+        title: "",
+        text: "",
+        author: "",
+        role: "",
+        location: "",
+        rating: "5",
+      });
+    } catch (error) {
+      console.error("Error saving review:", error);
+      alert("Error saving review");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to delete this review?")) {
+      return;
+    }
+    try {
+      await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
+      await loadReviews();
+      if (editingId === id) {
+        setEditingId(null);
+        setFormData({
+          title: "",
+          text: "",
+          author: "",
+          role: "",
+          location: "",
+          rating: "5",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      alert("Error deleting review");
+    }
+  }
+
+  if (loading) {
+    return <div>Loading reviews...</div>;
+  }
+
+  return (
+    <div>
+      <div className="admin-schedule__form">
+        <h2>{editingId ? "Edit Review" : "Add New Review"}</h2>
+        <div className="admin-schedule__form-grid">
+          <div className="admin-schedule__field">
+            <label>Title *</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              placeholder="Review title"
+              required
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Rating (1–5)</label>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={formData.rating}
+              onChange={(e) =>
+                setFormData({ ...formData, rating: e.target.value })
+              }
+              placeholder="5"
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Author *</label>
+            <input
+              type="text"
+              value={formData.author}
+              onChange={(e) =>
+                setFormData({ ...formData, author: e.target.value })
+              }
+              placeholder="Name"
+              required
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Role</label>
+            <input
+              type="text"
+              value={formData.role}
+              onChange={(e) =>
+                setFormData({ ...formData, role: e.target.value })
+              }
+              placeholder="e.g., Private Collector"
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Location</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) =>
+                setFormData({ ...formData, location: e.target.value })
+              }
+              placeholder="e.g., New York City"
+            />
+          </div>
+          <div
+            className="admin-schedule__field"
+            style={{ gridColumn: "1 / -1" }}
+          >
+            <label>Text *</label>
+            <textarea
+              value={formData.text}
+              onChange={(e) =>
+                setFormData({ ...formData, text: e.target.value })
+              }
+              rows={6}
+              placeholder="Review text"
+              required
+              style={{
+                border: "1px solid var(--line)",
+                padding: "10px 12px",
+                fontFamily: "inherit",
+                fontSize: "1rem",
+                background: "var(--background)",
+                color: "var(--foreground)",
+              }}
+            />
+          </div>
+        </div>
+        <div className="admin-schedule__form-actions">
+          <button
+            onClick={handleSave}
+            className="admin-schedule__button admin-schedule__button--primary"
+          >
+            {editingId ? "Update" : "Add"} Review
+          </button>
+          {editingId && (
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setFormData({
+                  title: "",
+                  text: "",
+                  author: "",
+                  role: "",
+                  location: "",
+                  rating: "5",
+                });
+              }}
+              className="admin-schedule__button"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="admin-schedule__list">
+        <h2>Reviews ({reviews.length})</h2>
+        <div className="admin-schedule__events">
+          {reviews.map((r) => (
+            <div key={r.id} className="admin-schedule__event">
+              <div className="admin-schedule__event-content">
+                <div className="admin-schedule__event-date">
+                  {"★".repeat(Math.max(1, Math.min(5, r.rating || 5)))}
+                </div>
+                <div className="admin-schedule__event-info">
+                  <div className="admin-schedule__event-name">{r.title}</div>
+                  <div className="admin-schedule__event-location">
+                    {r.author}
+                    {r.role ? ` — ${r.role}` : ""}
+                    {r.location ? `, ${r.location}` : ""}
+                  </div>
+                </div>
+              </div>
+              <div className="admin-schedule__event-actions">
+                <button
+                  onClick={() => {
+                    setEditingId(r.id);
+                    setFormData({
+                      title: r.title,
+                      text: r.text,
+                      author: r.author,
+                      role: r.role ?? "",
+                      location: r.location ?? "",
+                      rating: String(r.rating ?? 5),
+                    });
+                  }}
+                  className="admin-schedule__button admin-schedule__button--small"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(r.id)}
+                  className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

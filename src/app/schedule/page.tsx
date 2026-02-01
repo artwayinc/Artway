@@ -41,7 +41,18 @@ export default function SchedulePage() {
                 <span className="schedule__date schedule__date--empty">—</span>
               )}
               <div className="schedule__info">
-                <p className="schedule__name">{event.name}</p>
+                {event.url ? (
+                  <a
+                    className="schedule__name schedule__link"
+                    href={event.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {event.name}
+                  </a>
+                ) : (
+                  <p className="schedule__name">{event.name}</p>
+                )}
                 {event.location ? (
                   <p className="schedule__location">{event.location}</p>
                 ) : null}

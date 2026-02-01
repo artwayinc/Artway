@@ -3,19 +3,22 @@
     "id": "1",
     "date": "Jan 9 - 13",
     "name": "The Original Miami Beach Antique Show",
-    "location": "Miami Beach Convention Center"
+    "location": "Miami Beach Convention Center",
+    "url": "https://example.com/events/the-original-miami-beach-antique-show"
   },
   {
     "id": "2",
     "date": "Jan 10 - 12",
     "name": "Washington Winter Show",
-    "location": "The Katzen Arts Center"
+    "location": "The Katzen Arts Center",
+    "url": "https://example.com/events/washington-winter-show"
   },
   {
     "id": "3",
     "date": "",
     "name": "Antiques Art & Design",
-    "location": "Wallace Hall NYC"
+    "location": "Wallace Hall NYC",
+    "url": "https://example.com/events/antiques-art-and-design"
   },
   {
     "id": "4",

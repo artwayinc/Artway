@@ -34,21 +34,25 @@ export const metadata: Metadata = {
 
 export default function Home() {
   const heroBgImage = getImagePath("/main.png");
-  
+
   return (
     <>
-      <section 
+      <section
         className="hero"
         style={{
-          background: `linear-gradient(var(--hero-overlay), var(--hero-overlay)), url("${heroBgImage}") center/cover no-repeat`
+          background: `linear-gradient(var(--hero-overlay), var(--hero-overlay)), url("${heroBgImage}") center/cover no-repeat`,
         }}
       >
         <div className="container hero__content">
           <p className="hero__eyebrow">Since 1995</p>
           <h1 className="hero__title">Fine Art Shipping & Handling</h1>
+          <p className="hero__subtitle hero__subtitle--lead">
+            Full-service art logistics
+          </p>
           <p className="hero__subtitle">
-            White glove delivery, packing, storage, and installation for
-            galleries, collectors, and institutions across the United States.
+            Custom packing, secure storage, nationwide and international
+            service, white-glove delivery, installation, and auction and
+            exhibition support, with pricing tailored to your needs.
           </p>
           <Link className="button" href="/quote-request">
             Request a Quote

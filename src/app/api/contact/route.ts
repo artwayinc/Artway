@@ -19,24 +19,76 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }
 
-  const { name, email, phone, subject, message } = body as Record<
-    string,
-    unknown
-  >;
+  const record = body as Record<string, unknown>;
+  const isLegacy =
+    typeof record.subject === "string" && typeof record.message === "string";
+
+  const phoneRaw = record.phone;
 
   const phoneCountry =
-    typeof phone === "object" && phone !== null
-      ? String((phone as Record<string, unknown>).country ?? "").trim()
+    typeof phoneRaw === "object" && phoneRaw !== null
+      ? String((phoneRaw as Record<string, unknown>).country ?? "").trim()
       : "US";
   const phoneNumber =
-    typeof phone === "object" && phone !== null
-      ? String((phone as Record<string, unknown>).number ?? "").trim()
-      : String(phone ?? "").trim();
+    typeof phoneRaw === "object" && phoneRaw !== null
+      ? String((phoneRaw as Record<string, unknown>).number ?? "").trim()
+      : String(phoneRaw ?? "").trim();
 
-  const nameValue = String(name ?? "").trim();
-  const emailValue = String(email ?? "").trim();
-  const subjectValue = String(subject ?? "").trim();
-  const messageValue = String(message ?? "").trim();
+  const emailValue = String(record.email ?? "").trim();
+
+  const nameValue = isLegacy
+    ? String(record.name ?? "").trim()
+    : String(record.fullName ?? "").trim();
+
+  const subjectValue = isLegacy
+    ? String(record.subject ?? "").trim()
+    : "Quote Request";
+
+  const messageValue = (() => {
+    if (isLegacy) return String(record.message ?? "").trim();
+
+    const company = String(record.company ?? "").trim();
+    const from = String(record.from ?? "").trim();
+    const to = String(record.to ?? "").trim();
+    const itemDescription = String(record.itemDescription ?? "").trim();
+    const declaredValue = String(record.declaredValue ?? "").trim();
+    const notes = String(record.notes ?? "").trim();
+
+    const dimensions = (record.dimensions ?? {}) as Record<string, unknown>;
+    const dimH = String(dimensions.h ?? "").trim();
+    const dimW = String(dimensions.w ?? "").trim();
+    const dimD = String(dimensions.d ?? "").trim();
+    const dimUnit = String(dimensions.unit ?? "").trim();
+
+    const weight = (record.weight ?? {}) as Record<string, unknown>;
+    const weightValue = String(weight.value ?? "").trim();
+    const weightUnit = String(weight.unit ?? "").trim();
+
+    const lines: string[] = [];
+    lines.push("Quote Request");
+    lines.push("");
+    lines.push(`Full Name: ${nameValue}`);
+    if (company) lines.push(`Company / Gallery / Institution: ${company}`);
+    lines.push(`Email: ${emailValue}`);
+    lines.push(`Phone: +${phoneCountry} ${phoneNumber}`.trim());
+    lines.push("");
+    lines.push(`From: ${from}`);
+    lines.push(`To: ${to}`);
+    lines.push("");
+    lines.push(`Item Description: ${itemDescription}`);
+    lines.push(
+      `Dimensions (H × W × D): ${dimH} × ${dimW} × ${dimD} ${dimUnit}`.trim(),
+    );
+    if (weightValue) lines.push(`Weight: ${weightValue} ${weightUnit}`.trim());
+    if (declaredValue)
+      lines.push(`Declared Value / Insurance Value: ${declaredValue}`);
+    if (notes) {
+      lines.push("");
+      lines.push("Notes:");
+      lines.push(notes);
+    }
+    return lines.join("\n").trim();
+  })();
 
   if (
     !nameValue ||
@@ -87,11 +139,20 @@ export async function POST(request: Request) {
 
   // Отправляем письмо
   try {
+    const subjectDetails = !isLegacy
+      ? (() => {
+          const from = String(record.from ?? "").trim();
+          const to = String(record.to ?? "").trim();
+          const extra =
+            from || to ? ` (${from}${from && to ? " → " : ""}${to})` : "";
+          return `Quote Request${extra}: ${nameValue}`.trim();
+        })()
+      : `Quote Request: ${subjectValue}`;
     await transporter.sendMail({
       from: `"Artway Website" <${SMTP_USER}>`,
       to: MAIL_TO,
       replyTo: emailValue,
-      subject: `Quote Request: ${subjectValue}`,
+      subject: subjectDetails,
       text,
     });
   } catch (error) {

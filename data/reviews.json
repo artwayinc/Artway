@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "rating": 5,
+    "title": "Exceptional Art Shipping & White Glove Service",
+    "text": "ARTWAY handled the packing, transportation, and installation of multiple high-value artworks with absolute professionalism. Their white glove delivery team was punctual, careful, and highly experienced. From custom crating to final placement, every detail was executed flawlessly. If you’re looking for reliable art shipping and logistics, ARTWAY is truly top-tier.",
+    "author": "Hugh Medley",
+    "role": "Private Collector",
+    "location": "New York City"
+  },
+  {
+    "id": "2",
+    "rating": 5,
+    "title": "Trusted Partner for Auction & International Art Shipping",
+    "text": "We regularly rely on ARTWAY for auction pickups, international shipping, and secure storage. Their team understands the complexity of post-sale logistics and handles customs paperwork, crating, and delivery seamlessly. ARTWAY has become our go-to art logistics provider for both domestic and international shipments.",
+    "author": "Regina Marsman",
+    "role": "Gallery Director",
+    "location": "New York & Florida"
+  },
+  {
+    "id": "3",
+    "rating": 5,
+    "title": "Museum-Level Packing, Storage, and Transportation",
+    "text": "ARTWAY provided museum-grade packing and climate-controlled storage for a sensitive collection of antiques and fine art. Their attention to detail and understanding of conservation standards gave us complete peace of mind. From warehouse handling to nationwide delivery, their art transportation services exceeded expectations.",
+    "author": "Lawrence Botman",
+    "role": "Antique Dealer",
+    "location": "Tri-State Area"
+  },
+  {
+    "id": "4",
+    "rating": 5,
+    "title": "Professional, Reliable, and Cost-Effective Art Logistics",
+    "text": "We used ARTWAY for nationwide art shipping, including consolidated shuttle transport and designated delivery. Their pricing was transparent, their communication excellent, and their handling impeccable. ARTWAY combines efficiency with true white glove care — a rare find in the art logistics industry.",
+    "author": "Leilani M.",
+    "role": "Interior Designer & Art Consultant",
+    "location": "California"
+  }
+]

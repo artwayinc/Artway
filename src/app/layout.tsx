@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Lato, Playfair_Display } from "next/font/google";
+import { Lato, Playfair_Display, Allerta_Stencil } from "next/font/google";
 import "./globals.css";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
@@ -16,6 +16,12 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
   variable: "--font-playfair",
+});
+
+const allertaStencil = Allerta_Stencil({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-allerta-stencil",
 });
 
 export const metadata: Metadata = {
@@ -60,29 +66,32 @@ export const metadata: Metadata = {
     description:
       "Fine art shipping, handling, packing, storage, and installation.",
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://artwayinc.com"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://artwayinc.com",
+  ),
 };
 
 // Структурированные данные Schema.org для SEO
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  "name": "Artway Fine Art Services",
-  "description": "Fine art shipping, handling, packing, storage, and installation services",
-  "url": "https://artwayinc.com",
-  "telephone": ["+1-855-527-8929", "+1-718-213-6886"],
-  "email": "info@artwayinc.com",
-  "address": {
+  name: "Artway Fine Art Services",
+  description:
+    "Fine art shipping, handling, packing, storage, and installation services",
+  url: "https://artwayinc.com",
+  telephone: ["+1-855-527-8929", "+1-718-213-6886"],
+  email: "info@artwayinc.com",
+  address: {
     "@type": "PostalAddress",
-    "addressLocality": "New York",
-    "addressRegion": "NY",
-    "addressCountry": "US"
+    addressLocality: "New York",
+    addressRegion: "NY",
+    addressCountry: "US",
   },
-  "areaServed": {
+  areaServed: {
     "@type": "Country",
-    "name": "United States"
+    name: "United States",
   },
-  "serviceType": [
+  serviceType: [
     "Fine Art Shipping",
     "Art Handling",
     "Art Packing & Crating",
@@ -90,12 +99,10 @@ const organizationSchema = {
     "White Glove Delivery",
     "Art Installation",
     "Auction House Services",
-    "Art Restoration"
+    "Art Restoration",
   ],
-  "foundingDate": "1995",
-  "sameAs": [
-    "https://www.facebook.com/artwayfas/"
-  ]
+  foundingDate: "1995",
+  sameAs: ["https://www.facebook.com/artwayfas/"],
 };
 
 export default function RootLayout({
@@ -105,11 +112,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${lato.variable} ${playfair.variable}`}>
+      <body
+        className={`${lato.variable} ${playfair.variable} ${allertaStencil.variable}`}
+      >
         <Script
           id="organization-schema"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationSchema),
+          }}
         />
         <div className="site">
           <SiteHeader />

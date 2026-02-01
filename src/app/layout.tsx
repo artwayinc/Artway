@@ -87,10 +87,64 @@ const organizationSchema = {
     addressRegion: "NY",
     addressCountry: "US",
   },
-  areaServed: {
-    "@type": "Country",
-    name: "United States",
-  },
+  areaServed: [
+    {
+      "@type": "Country",
+      name: "United States",
+    },
+    {
+      "@type": "City",
+      name: "New York City",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "New York",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "New Jersey",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "Connecticut",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "Pennsylvania",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "Florida",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "Georgia",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "North Carolina",
+    },
+    {
+      "@type": "AdministrativeArea",
+      name: "South Carolina",
+    },
+    {
+      "@type": "City",
+      name: "Chicago",
+    },
+    {
+      "@type": "Place",
+      name: "The Hamptons",
+    },
+    {
+      "@type": "Place",
+      name: "Long Island",
+    },
+    {
+      "@type": "Place",
+      name: "East Coast",
+    },
+  ],
   serviceType: [
     "Fine Art Shipping",
     "Art Handling",

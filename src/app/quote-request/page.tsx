@@ -9,11 +9,16 @@ export const metadata: Metadata = {
     "Request a quote for fine art shipping, handling, storage, and installation services. Get competitive pricing for one-way or round-trip delivery.",
   keywords: [
     "fine art shipping quote",
+    "fine art shipping services",
     "art transportation quote",
     "art logistics quote",
     "art shipping cost",
     "fine art handling quote",
     "art storage quote",
+    "art moving services",
+    "fine art movers",
+    "white glove delivery",
+    "art installation services",
   ],
   alternates: {
     canonical: "/quote-request",

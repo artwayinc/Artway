@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     "fine art event calendar",
     "art show logistics",
     "exhibition shipping",
+    "shows and exhibitions",
+    "art handling for exhibitions",
+    "exhibition art transport",
+    "institutional art logistics",
+    "art logistics for galleries",
+    "art logistics for collectors",
+    "auction art shipping",
   ],
   alternates: {
     canonical: "/schedule",

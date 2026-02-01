@@ -423,6 +423,38 @@ html[data-theme="dark"] .logo {
   color: var(--muted);
 }
 
+.quote__qr {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 16px;
+}
+
+.quote__qrTitle {
+  font-family: var(--font-playfair), "Times New Roman", serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.quote__qrText {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+}
+
+.quote__qrImageWrap {
+  width: min(260px, 100%);
+  margin: 0 auto;
+}
+
+.quote__qrImage {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  background: var(--background);
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -502,7 +534,9 @@ html[data-theme="dark"] .logo {
   width: 32px;
   height: 32px;
   color: var(--foreground);
-  transition: color 0.3s ease, transform 0.2s ease;
+  transition:
+    color 0.3s ease,
+    transform 0.2s ease;
   text-decoration: none;
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import QuoteForm from "@/components/QuoteForm";
 
 export const metadata: Metadata = {
@@ -46,6 +47,22 @@ export default function QuoteRequestPage() {
         </div>
         <div className="quote__form">
           <QuoteForm />
+          <aside className="quote__qr" aria-label="QR code">
+            <h2 className="quote__qrTitle">Scan QR</h2>
+            <p className="quote__qrText">
+              Open this page on your phone or share it.
+            </p>
+            <div className="quote__qrImageWrap">
+              <Image
+                src="/qr.jpeg"
+                alt="Artway QR code"
+                width={320}
+                height={320}
+                className="quote__qrImage"
+                priority={false}
+              />
+            </div>
+          </aside>
         </div>
       </div>
     </section>

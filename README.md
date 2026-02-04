@@ -6,7 +6,7 @@
 
 ### Требования
 
-- Node.js 18+ 
+- Node.js 18+
 - npm, yarn, pnpm или bun
 
 ### Установка зависимостей
@@ -63,7 +63,7 @@ npm start
 
 ## Оптимизация изображений
 
-Проект использует оптимизированные изображения для улучшения производительности сайта. Изображения из `public/services/` конвертируются в формат WebP, а `main.png` оптимизируется с сохранением прозрачности.
+Проект использует оптимизированные изображения для улучшения производительности сайта. Изображения из `public/services/` и главное изображение `public/main.jpg` конвертируются в формат WebP.
 
 ### Запуск оптимизации
 
@@ -74,21 +74,23 @@ npm run optimize-images
 ```
 
 Скрипт автоматически:
+
 - Конвертирует PNG изображения из `public/services/` в WebP формат (уменьшение размера на 90-93%)
-- Оптимизирует `public/main.png` с сохранением прозрачности (уменьшение размера на ~70%)
+- Конвертирует `public/main.jpg` в `public/main.webp` (как и изображения в services/)
 - Выводит статистику по каждому обработанному файлу
 
 ### Когда запускать оптимизацию
 
 Запускайте оптимизацию в следующих случаях:
+
 - После добавления новых изображений в `public/services/`
-- После обновления `public/main.png`
+- После обновления `public/main.jpg`
 - Перед деплоем в продакшн
 
 ### Форматы изображений
 
 - **Изображения services/**: Используйте формат WebP (создается автоматически при оптимизации)
-- **main.png**: Должен оставаться в формате PNG для сохранения прозрачности фона
+- **Главное изображение**: Исходник `public/main.jpg` конвертируется в `public/main.webp` (как в services/)
 
 ### Примечание
 
@@ -127,34 +129,39 @@ echo "[]" > data/schedule.json
 ### Настройка БД на сервере
 
 1. **Создайте папку для данных:**
+
    ```bash
    mkdir -p /path/to/project/data
    ```
 
 2. **Установите права доступа:**
+
    ```bash
    chmod 755 /path/to/project/data
    chmod 644 /path/to/project/data/schedule.json
    ```
 
 3. **Убедитесь, что процесс Next.js имеет права на запись:**
+
    - Проверьте пользователя, под которым запущен процесс
    - Убедитесь, что у пользователя есть права на запись в папку `data`
 
 4. **Для продакшна (PM2, systemd и т.д.):**
+
    ```bash
    # Пример для systemd
    # Убедитесь, что User= в service файле имеет права на запись
    ```
 
 5. **Проверка прав доступа:**
+
    ```bash
    # Проверить текущего пользователя
    whoami
-   
+
    # Проверить права на папку
    ls -la data/
-   
+
    # Если нужно изменить владельца
    sudo chown -R $USER:$USER data/
    ```
@@ -168,32 +175,35 @@ echo "[]" > data/schedule.json
 Если нужно изменить структуру записей в `schedule.json`:
 
 1. **Создайте бекап:**
+
    ```bash
    cp data/schedule.json data/schedule.json.backup
    ```
 
 2. **Обновите структуру:**
+
    - Отредактируйте `data/schedule.json` вручную
    - Или используйте скрипт миграции (см. ниже)
 
 3. **Пример скрипта миграции:**
+
    ```javascript
    // scripts/migrate.js
-   const fs = require('fs');
-   const path = require('path');
-   
-   const scheduleFile = path.join(__dirname, '../data/schedule.json');
-   const events = JSON.parse(fs.readFileSync(scheduleFile, 'utf-8'));
-   
+   const fs = require("fs");
+   const path = require("path");
+
+   const scheduleFile = path.join(__dirname, "../data/schedule.json");
+   const events = JSON.parse(fs.readFileSync(scheduleFile, "utf-8"));
+
    // Применить изменения
-   const migrated = events.map(event => ({
+   const migrated = events.map((event) => ({
      ...event,
      // Добавить новое поле или изменить существующее
-     newField: event.newField || 'default-value'
+     newField: event.newField || "default-value",
    }));
-   
+
    fs.writeFileSync(scheduleFile, JSON.stringify(migrated, null, 2));
-   console.log('Migration completed');
+   console.log("Migration completed");
    ```
 
 4. **Запустите миграцию:**
@@ -214,10 +224,10 @@ mv data/schedule.json.tmp data/schedule.json
 Или используйте Node.js скрипт:
 
 ```javascript
-const fs = require('fs');
-const events = JSON.parse(fs.readFileSync('data/schedule.json', 'utf-8'));
-const updated = events.map(e => ({ ...e, newField: '' }));
-fs.writeFileSync('data/schedule.json', JSON.stringify(updated, null, 2));
+const fs = require("fs");
+const events = JSON.parse(fs.readFileSync("data/schedule.json", "utf-8"));
+const updated = events.map((e) => ({ ...e, newField: "" }));
+fs.writeFileSync("data/schedule.json", JSON.stringify(updated, null, 2));
 ```
 
 ## Резервное копирование (Backup)
@@ -325,6 +335,7 @@ rsync -avz $BACKUP_FILE user@remote-server:/path/to/backups/
 ### Управление расписанием
 
 После входа в админку доступна страница `/admin/schedule` для:
+
 - Просмотра всех событий
 - Добавления новых событий
 - Редактирования существующих событий
@@ -333,6 +344,7 @@ rsync -avz $BACKUP_FILE user@remote-server:/path/to/backups/
 ### Безопасность
 
 ⚠️ **Важно для продакшна:**
+
 - Используйте сложный пароль (минимум 16 символов)
 - Регулярно меняйте пароль
 - Не коммитьте `.env.local` в git

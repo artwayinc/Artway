@@ -57,7 +57,7 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  const heroBgImage = getImagePath("/main.png");
+  const heroBgImage = getImagePath("/main.webp");
 
   return (
     <>

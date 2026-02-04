@@ -21,7 +21,10 @@ function formatPhoneNumber(value: string): string {
   if (limitedNumbers.length <= 6) {
     return `(${limitedNumbers.slice(0, 3)}) ${limitedNumbers.slice(3)}`;
   }
-  return `(${limitedNumbers.slice(0, 3)}) ${limitedNumbers.slice(3, 6)}-${limitedNumbers.slice(6)}`;
+  return `(${limitedNumbers.slice(0, 3)}) ${limitedNumbers.slice(
+    3,
+    6
+  )}-${limitedNumbers.slice(6)}`;
 }
 
 export default function QuoteForm() {
@@ -89,7 +92,7 @@ export default function QuoteForm() {
     } catch (error) {
       setStatus("error");
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to send message.",
+        error instanceof Error ? error.message : "Unable to send message."
       );
     }
   }
@@ -125,11 +128,25 @@ export default function QuoteForm() {
         </label>
         <label className="form__field">
           <span>From *</span>
-          <input type="text" name="from" required />
+          <input
+            type="text"
+            name="from"
+            required
+            autoComplete="off"
+            data-lpignore
+            data-form-type="other"
+          />
         </label>
         <label className="form__field">
           <span>To *</span>
-          <input type="text" name="to" required />
+          <input
+            type="text"
+            name="to"
+            required
+            autoComplete="off"
+            data-lpignore
+            data-form-type="other"
+          />
         </label>
         <label className="form__field form__field--full">
           <span>Item Description *</span>
@@ -210,7 +227,9 @@ export default function QuoteForm() {
         {status === "sending" ? "Sending..." : "Submit"}
       </button>
       {status === "success" ? (
-        <p className="form__notice">Thanks! We will get back to you soon.</p>
+        <p className="form__notice form__notice--success" role="status">
+          Thanks! We will get back to you soon.
+        </p>
       ) : null}
       {status === "error" ? (
         <p className="form__notice form__notice--error">{errorMessage}</p>

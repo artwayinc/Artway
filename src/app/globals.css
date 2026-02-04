@@ -297,8 +297,8 @@ html[data-theme="dark"] .logo {
 }
 
 .hero__title {
-  font-family:
-    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-display), var(--font-lato), "Helvetica Neue", Arial,
+    sans-serif;
   font-size: clamp(2.4rem, 4vw, 3.8rem);
   letter-spacing: 0.05em;
   margin-bottom: 16px;
@@ -326,9 +326,7 @@ html[data-theme="dark"] .logo {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.85rem;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
   background: transparent;
   color: var(--foreground);
   cursor: pointer;
@@ -349,8 +347,8 @@ html[data-theme="dark"] .logo {
 }
 
 .section__title {
-  font-family:
-    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-display), var(--font-lato), "Helvetica Neue", Arial,
+    sans-serif;
   font-size: clamp(1.8rem, 3vw, 2.6rem);
   letter-spacing: 0.04em;
   margin-bottom: 24px;
@@ -401,8 +399,8 @@ html[data-theme="dark"] .logo {
 }
 
 .review__title {
-  font-family:
-    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-display), var(--font-lato), "Helvetica Neue", Arial,
+    sans-serif;
   font-size: 1.1rem;
   margin-bottom: 10px;
 }
@@ -453,8 +451,8 @@ html[data-theme="dark"] .logo {
 }
 
 .card__title {
-  font-family:
-    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-display), var(--font-lato), "Helvetica Neue", Arial,
+    sans-serif;
   font-size: 1.2rem;
   margin-bottom: 12px;
   padding: 24px 24px 0;
@@ -515,6 +513,12 @@ html[data-theme="dark"] .logo {
   grid-template-columns: 1fr 1fr;
   gap: 40px;
   align-items: start;
+  min-width: 0;
+}
+
+.quote__info {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .quote__contact {
@@ -540,8 +544,8 @@ html[data-theme="dark"] .logo {
 }
 
 .quote__qrTitle {
-  font-family:
-    var(--font-display), var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-display), var(--font-lato), "Helvetica Neue", Arial,
+    sans-serif;
   font-size: 1.1rem;
   letter-spacing: 0.04em;
   margin-bottom: 8px;
@@ -575,6 +579,7 @@ html[data-theme="dark"] .logo {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .form__field {
@@ -592,6 +597,9 @@ html[data-theme="dark"] .logo {
   font-size: 1rem;
   background: var(--background);
   color: var(--foreground);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .form__field select {
@@ -624,11 +632,39 @@ html[data-theme="dark"] .logo {
 }
 
 .form__notice {
-  color: #146c43;
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+
+.form__notice--success {
+  color: #0d5c3a;
+  background: #e6f4ee;
+  border: 1px solid #0d5c3a;
+  padding: 14px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+html[data-theme="dark"] .form__notice--success {
+  color: #6ee7b7;
+  background: rgba(13, 92, 58, 0.35);
+  border-color: #0d5c3a;
 }
 
 .form__notice--error {
   color: #b42318;
+  background: #fef2f2;
+  border: 1px solid #b42318;
+  padding: 14px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+html[data-theme="dark"] .form__notice--error {
+  color: #fca5a5;
+  background: rgba(180, 35, 24, 0.2);
+  border-color: #b42318;
 }
 
 .footer {
@@ -679,9 +715,7 @@ html[data-theme="dark"] .logo {
   width: 32px;
   height: 32px;
   color: var(--foreground);
-  transition:
-    color 0.3s ease,
-    transform 0.2s ease;
+  transition: color 0.3s ease, transform 0.2s ease;
   text-decoration: none;
 }
 
@@ -735,6 +769,10 @@ html[data-theme="dark"] .logo {
 @media (max-width: 900px) {
   .quote {
     grid-template-columns: 1fr;
+  }
+
+  .quote__form {
+    min-width: 0;
   }
 
   .schedule__item {
@@ -797,10 +835,25 @@ html[data-theme="dark"] .logo {
     /* На узких экранах justify часто выглядит плохо */
     text-align: left;
     hyphens: manual;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 
   .form__grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Чтобы иконка автозаполнения (например, «Near me» в Safari) не перекрывала текст */
+  .form__field input,
+  .form__field textarea {
+    padding-left: 12px;
+    padding-right: 12px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .form__field input {
+    padding-right: 44px;
   }
 
   .footer__inner {

@@ -56,10 +56,26 @@ export default function QuoteRequestPage() {
               Phone: <a href="tel:+17182136886">(718) 213-6886</a>
             </p>
           </div>
+          <aside className="quote__qr quote__qr--desktop" aria-label="QR code">
+            <h2 className="quote__qrTitle">Scan QR</h2>
+            <p className="quote__qrText">
+              Open this page on your phone or share it.
+            </p>
+            <div className="quote__qrImageWrap">
+              <Image
+                src={getImagePath("/qr.jpeg")}
+                alt="Artway QR code"
+                width={320}
+                height={320}
+                className="quote__qrImage"
+                priority={false}
+              />
+            </div>
+          </aside>
         </div>
         <div className="quote__form">
           <QuoteForm />
-          <aside className="quote__qr" aria-label="QR code">
+          <aside className="quote__qr quote__qr--mobile" aria-label="QR code">
             <h2 className="quote__qrTitle">Scan QR</h2>
             <p className="quote__qrText">
               Open this page on your phone or share it.

@@ -36,7 +36,7 @@ export default function SiteFooter() {
             </svg>
           </a>
           <a
-            href="https://www.facebook.com/artwayfas/"
+            href="https://www.facebook.com/share/1FFrmNWTN8/?mibextid=wwXIfr"
             target="_blank"
             rel="noreferrer"
             aria-label="Facebook"

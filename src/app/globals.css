@@ -5,7 +5,7 @@
   --line: #e6e6e6;
   --accent: #1f1f1f;
   --surface: #f7f7f7;
-  --hero-overlay: rgba(255, 255, 255, 0.88);
+  --hero-overlay: rgba(255, 255, 255, 0.5);
   /* Display font for headings (requested: Allerta Stencil / or Lato) */
   --font-display: var(--font-allerta-stencil);
 }
@@ -17,7 +17,7 @@ html[data-theme="dark"] {
   --line: #2a2a2a;
   --accent: #f4f4f4;
   --surface: #141414;
-  --hero-overlay: rgba(13, 13, 13, 0.75);
+  --hero-overlay: rgba(13, 13, 13, 0.5);
 }
 
 *,
@@ -296,6 +296,11 @@ html[data-theme="dark"] .logo {
   margin-bottom: 16px;
 }
 
+.hero .hero__eyebrow,
+.hero .hero__subtitle:not(.hero__subtitle--lead) {
+  color: var(--foreground);
+}
+
 .hero__title {
   font-family: var(--font-display), var(--font-lato), "Helvetica Neue", Arial,
     sans-serif;
@@ -309,6 +314,7 @@ html[data-theme="dark"] .logo {
   color: var(--muted);
   font-size: 1.1rem;
   margin-bottom: 32px;
+  font-weight: 500;
 }
 
 .hero__subtitle--lead {
@@ -541,6 +547,22 @@ html[data-theme="dark"] .logo {
   border: 1px solid var(--line);
   background: var(--surface);
   padding: 16px;
+}
+
+/* Десктоп: QR только в левой колонке под контактами. Мобилка: QR только под формой */
+.quote__qr--desktop {
+  display: none;
+}
+.quote__qr--mobile {
+  display: block;
+}
+@media (min-width: 901px) {
+  .quote__qr--desktop {
+    display: block;
+  }
+  .quote__qr--mobile {
+    display: none;
+  }
 }
 
 .quote__qrTitle {

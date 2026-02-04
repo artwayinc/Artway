@@ -67,7 +67,7 @@ export const metadata: Metadata = {
       "Fine art shipping, handling, packing, storage, and installation.",
   },
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://artwayinc.com",
+    process.env.NEXT_PUBLIC_SITE_URL || "https://artwayinc.com"
   ),
 };
 
@@ -156,7 +156,7 @@ const organizationSchema = {
     "Art Restoration",
   ],
   foundingDate: "1995",
-  sameAs: ["https://www.facebook.com/artwayfas/"],
+  sameAs: ["https://www.facebook.com/share/1FFrmNWTN8/?mibextid=wwXIfr"],
 };
 
 export default function RootLayout({

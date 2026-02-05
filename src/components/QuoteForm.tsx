@@ -123,7 +123,6 @@ export default function QuoteForm() {
               setPhoneValue(formatted);
             }}
             placeholder="(555) 123-4567"
-            required
           />
         </label>
         <label className="form__field">
@@ -131,7 +130,6 @@ export default function QuoteForm() {
           <input
             type="text"
             name="from"
-            required
             autoComplete="off"
             data-lpignore
             data-form-type="other"
@@ -142,7 +140,6 @@ export default function QuoteForm() {
           <input
             type="text"
             name="to"
-            required
             autoComplete="off"
             data-lpignore
             data-form-type="other"
@@ -150,7 +147,7 @@ export default function QuoteForm() {
         </label>
         <label className="form__field form__field--full">
           <span>Item Description *</span>
-          <textarea name="itemDescription" rows={4} required />
+          <textarea name="itemDescription" rows={4} />
         </label>
 
         <div className="form__field form__field--full">
@@ -161,21 +158,18 @@ export default function QuoteForm() {
               type="text"
               name="dimH"
               placeholder="H"
-              required
             />
             <input
               inputMode="decimal"
               type="text"
               name="dimW"
               placeholder="W"
-              required
             />
             <input
               inputMode="decimal"
               type="text"
               name="dimD"
               placeholder="D"
-              required
             />
             <select
               aria-label="Dimensions unit"

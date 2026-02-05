@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (!SMTP_USER || !SMTP_PASS || !MAIL_TO) {
     return NextResponse.json(
       { error: "Email configuration is missing." },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     lines.push("");
     lines.push(`Item Description: ${itemDescription}`);
     lines.push(
-      `Dimensions (H × W × D): ${dimH} × ${dimW} × ${dimD} ${dimUnit}`.trim(),
+      `Dimensions (H × W × D): ${dimH} × ${dimW} × ${dimD} ${dimUnit}`.trim()
     );
     if (weightValue) lines.push(`Weight: ${weightValue} ${weightUnit}`.trim());
     if (declaredValue)
@@ -90,17 +90,26 @@ export async function POST(request: Request) {
     return lines.join("\n").trim();
   })();
 
-  if (
-    !nameValue ||
-    !emailValue ||
-    !phoneNumber ||
-    !subjectValue ||
-    !messageValue
-  ) {
-    return NextResponse.json(
-      { error: "All fields are required." },
-      { status: 400 },
-    );
+  if (isLegacy) {
+    if (
+      !nameValue ||
+      !emailValue ||
+      !phoneNumber ||
+      !subjectValue ||
+      !messageValue
+    ) {
+      return NextResponse.json(
+        { error: "All fields are required." },
+        { status: 400 }
+      );
+    }
+  } else {
+    if (!nameValue || !emailValue) {
+      return NextResponse.json(
+        { error: "Full Name and Email Address are required." },
+        { status: 400 }
+      );
+    }
   }
 
   const transporter = nodemailer.createTransport({

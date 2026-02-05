@@ -56,7 +56,7 @@ export function addEvent(event: Omit<ScheduleEvent, "id">): ScheduleEvent {
 
 export function updateEvent(
   id: string,
-  event: Partial<ScheduleEvent>,
+  event: Partial<ScheduleEvent>
 ): ScheduleEvent | null {
   const events = getSchedule();
   const index = events.findIndex((e) => e.id === id);
@@ -119,7 +119,7 @@ export function saveMessages(messages: ContactMessage[]): void {
 }
 
 export function addMessage(
-  message: Omit<ContactMessage, "id" | "createdAt" | "read">,
+  message: Omit<ContactMessage, "id" | "createdAt" | "read">
 ): ContactMessage {
   const messages = getMessages();
   const newId = String(Date.now());
@@ -164,6 +164,8 @@ export interface Review {
   author: string;
   role: string;
   location: string;
+  /** URL картинки (например /reviews/xxx.webp), опционально */
+  image?: string;
 }
 
 export function getReviews(): Review[] {
@@ -203,7 +205,7 @@ export function addReview(review: Omit<Review, "id">): Review {
 
 export function updateReview(
   id: string,
-  review: Partial<Review>,
+  review: Partial<Review>
 ): Review | null {
   const reviews = getReviews();
   const index = reviews.findIndex((r) => r.id === id);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { ScheduleEvent } from "@/lib/db";
 import type { ContactMessage } from "@/lib/db";
@@ -13,6 +13,7 @@ type ReviewForm = {
   role: string;
   location: string;
   rating: string;
+  image: string;
 };
 
 export default function AdminDashboardPage() {
@@ -65,19 +66,25 @@ export default function AdminDashboardPage() {
 
       <div className="admin-tabs">
         <button
-          className={`admin-tabs__tab ${activeTab === "schedule" ? "admin-tabs__tab--active" : ""}`}
+          className={`admin-tabs__tab ${
+            activeTab === "schedule" ? "admin-tabs__tab--active" : ""
+          }`}
           onClick={() => setActiveTab("schedule")}
         >
           Schedule
         </button>
         <button
-          className={`admin-tabs__tab ${activeTab === "messages" ? "admin-tabs__tab--active" : ""}`}
+          className={`admin-tabs__tab ${
+            activeTab === "messages" ? "admin-tabs__tab--active" : ""
+          }`}
           onClick={() => setActiveTab("messages")}
         >
           Messages
         </button>
         <button
-          className={`admin-tabs__tab ${activeTab === "reviews" ? "admin-tabs__tab--active" : ""}`}
+          className={`admin-tabs__tab ${
+            activeTab === "reviews" ? "admin-tabs__tab--active" : ""
+          }`}
           onClick={() => setActiveTab("reviews")}
         >
           Reviews
@@ -284,7 +291,7 @@ function MessagesTab() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(
-    null,
+    null
   );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -380,7 +387,13 @@ function MessagesTab() {
               {paginatedMessages.map((message) => (
                 <div
                   key={message.id}
-                  className={`admin-messages__item ${!message.read ? "admin-messages__item--unread" : ""} ${selectedMessage?.id === message.id ? "admin-messages__item--selected" : ""}`}
+                  className={`admin-messages__item ${
+                    !message.read ? "admin-messages__item--unread" : ""
+                  } ${
+                    selectedMessage?.id === message.id
+                      ? "admin-messages__item--selected"
+                      : ""
+                  }`}
                   onClick={() => {
                     setSelectedMessage(message);
                     if (!message.read) {
@@ -487,6 +500,7 @@ type ReviewItem = {
   author: string;
   role: string;
   location: string;
+  image?: string;
 };
 
 function ReviewsTab() {
@@ -500,7 +514,10 @@ function ReviewsTab() {
     role: "",
     location: "",
     rating: "5",
+    image: "",
   });
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadReviews();
@@ -529,13 +546,20 @@ function ReviewsTab() {
         await fetch("/api/reviews", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingId, ...payload }),
+          body: JSON.stringify({
+            id: editingId,
+            ...payload,
+            image: formData.image,
+          }),
         });
       } else {
         await fetch("/api/reviews", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            image: formData.image || undefined,
+          }),
         });
       }
 
@@ -548,10 +572,38 @@ function ReviewsTab() {
         role: "",
         location: "",
         rating: "5",
+        image: "",
       });
     } catch (error) {
       console.error("Error saving review:", error);
       alert("Error saving review");
+    }
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/reviews/upload", {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Upload failed");
+      }
+      const data = (await res.json()) as { url: string };
+      setFormData((prev) => ({ ...prev, image: data.url }));
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(err instanceof Error ? err.message : "Failed to upload image");
+    } finally {
+      setImageUploading(false);
+      e.target.value = "";
+      imageInputRef.current?.value && (imageInputRef.current.value = "");
     }
   }
 
@@ -571,6 +623,7 @@ function ReviewsTab() {
           role: "",
           location: "",
           rating: "5",
+          image: "",
         });
       }
     } catch (error) {
@@ -670,6 +723,69 @@ function ReviewsTab() {
               }}
             />
           </div>
+          <div
+            className="admin-schedule__field admin-reviews__image-field"
+            style={{ gridColumn: "1 / -1" }}
+          >
+            <label>Image (optional)</label>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageUpload}
+              disabled={imageUploading}
+              style={{ display: "none" }}
+              aria-hidden
+            />
+            {formData.image ? (
+              <div className="admin-reviews__image-preview-wrap">
+                <img
+                  src={formData.image}
+                  alt=""
+                  className="admin-reviews__image-preview"
+                />
+                <div className="admin-reviews__image-actions">
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={imageUploading}
+                    className="admin-schedule__button admin-schedule__button--small"
+                  >
+                    {imageUploading ? "Uploading…" : "Change"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, image: "" }))
+                    }
+                    className="admin-schedule__button admin-schedule__button--small"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={imageUploading}
+                className="admin-reviews__upload-trigger"
+              >
+                {imageUploading ? (
+                  "Uploading…"
+                ) : (
+                  <>
+                    <span className="admin-reviews__upload-label">
+                      Upload image
+                    </span>
+                    <span className="admin-reviews__upload-hint">
+                      JPEG, PNG, WebP, GIF — file will be saved as WebP
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
         <div className="admin-schedule__form-actions">
           <button
@@ -689,6 +805,7 @@ function ReviewsTab() {
                   role: "",
                   location: "",
                   rating: "5",
+                  image: "",
                 });
               }}
               className="admin-schedule__button"
@@ -701,10 +818,19 @@ function ReviewsTab() {
 
       <div className="admin-schedule__list">
         <h2>Reviews ({reviews.length})</h2>
-        <div className="admin-schedule__events">
+        <div className="admin-schedule__events admin-reviews__events">
           {reviews.map((r) => (
             <div key={r.id} className="admin-schedule__event">
               <div className="admin-schedule__event-content">
+                <div className="admin-reviews__list-thumb-wrap">
+                  {r.image && (
+                    <img
+                      src={r.image}
+                      alt=""
+                      className="admin-reviews__list-thumb"
+                    />
+                  )}
+                </div>
                 <div className="admin-schedule__event-date">
                   {"★".repeat(Math.max(1, Math.min(5, r.rating || 5)))}
                 </div>
@@ -728,6 +854,7 @@ function ReviewsTab() {
                       role: r.role ?? "",
                       location: r.location ?? "",
                       rating: String(r.rating ?? 5),
+                      image: r.image ?? "",
                     });
                   }}
                   className="admin-schedule__button admin-schedule__button--small"

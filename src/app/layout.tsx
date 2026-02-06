@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Lato, Playfair_Display, Allerta_Stencil } from "next/font/google";
 import "./globals.css";
 import SiteFooter from "@/components/SiteFooter";
@@ -183,6 +184,7 @@ export default function RootLayout({
           </main>
           <SiteFooter />
         </div>
+        <SpeedInsights />
       </body>
     </html>
   );

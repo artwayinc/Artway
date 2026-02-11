@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Reorder, useDragControls } from "framer-motion";
 import type { ScheduleEvent } from "@/lib/db";
 import type { ContactMessage } from "@/lib/db";
 
@@ -98,6 +99,90 @@ export default function AdminDashboardPage() {
   );
 }
 
+function DragHandle({ dragControls }: { dragControls: ReturnType<typeof useDragControls> }) {
+  return (
+    <button
+      className="admin-drag-handle"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        dragControls.start(e);
+      }}
+      aria-label="Drag to reorder"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="5" cy="3" r="1.5" />
+        <circle cx="11" cy="3" r="1.5" />
+        <circle cx="5" cy="8" r="1.5" />
+        <circle cx="11" cy="8" r="1.5" />
+        <circle cx="5" cy="13" r="1.5" />
+        <circle cx="11" cy="13" r="1.5" />
+      </svg>
+    </button>
+  );
+}
+
+function ScheduleEventItem({
+  event,
+  onEdit,
+  onDelete,
+}: {
+  event: ScheduleEvent;
+  onEdit: (event: ScheduleEvent) => void;
+  onDelete: (id: string) => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={event}
+      dragListener={false}
+      dragControls={dragControls}
+      className="admin-schedule__event admin-drag-item"
+      whileDrag={{ scale: 1.02, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", zIndex: 10 }}
+      transition={{ duration: 0.2 }}
+    >
+      <DragHandle dragControls={dragControls} />
+      <div className="admin-schedule__event-content">
+        <div className="admin-schedule__event-date">
+          {event.date || "—"}
+        </div>
+        <div className="admin-schedule__event-info">
+          <div className="admin-schedule__event-name">{event.name}</div>
+          {event.location && (
+            <div className="admin-schedule__event-location">
+              {event.location}
+            </div>
+          )}
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-schedule__event-url"
+            >
+              {event.url}
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="admin-schedule__event-actions">
+        <button
+          onClick={() => onEdit(event)}
+          className="admin-schedule__button admin-schedule__button--small"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => onDelete(event.id)}
+          className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
+        >
+          Delete
+        </button>
+      </div>
+    </Reorder.Item>
+  );
+}
+
 function ScheduleTab() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +193,7 @@ function ScheduleTab() {
     location: "",
     url: "",
   });
+  const reorderTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -124,6 +210,22 @@ function ScheduleTab() {
       setLoading(false);
     }
   }
+
+  const saveOrder = useCallback((newEvents: ScheduleEvent[]) => {
+    setEvents(newEvents);
+    if (reorderTimeout.current) clearTimeout(reorderTimeout.current);
+    reorderTimeout.current = setTimeout(async () => {
+      try {
+        await fetch("/api/schedule", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderedIds: newEvents.map((e) => e.id) }),
+        });
+      } catch (error) {
+        console.error("Error saving order:", error);
+      }
+    }, 600);
+  }, []);
 
   async function handleSave() {
     try {
@@ -241,47 +343,30 @@ function ScheduleTab() {
 
       <div className="admin-schedule__list">
         <h2>Events ({events.length})</h2>
-        <div className="admin-schedule__events">
+        <p className="admin-drag-hint">Drag items to reorder</p>
+        <Reorder.Group
+          axis="y"
+          values={events}
+          onReorder={saveOrder}
+          className="admin-schedule__events admin-drag-list"
+        >
           {events.map((event) => (
-            <div key={event.id} className="admin-schedule__event">
-              <div className="admin-schedule__event-content">
-                <div className="admin-schedule__event-date">
-                  {event.date || "—"}
-                </div>
-                <div className="admin-schedule__event-info">
-                  <div className="admin-schedule__event-name">{event.name}</div>
-                  {event.location && (
-                    <div className="admin-schedule__event-location">
-                      {event.location}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="admin-schedule__event-actions">
-                <button
-                  onClick={() => {
-                    setEditingId(event.id);
-                    setFormData({
-                      date: event.date,
-                      name: event.name,
-                      location: event.location,
-                      url: event.url ?? "",
-                    });
-                  }}
-                  className="admin-schedule__button admin-schedule__button--small"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(event.id)}
-                  className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+            <ScheduleEventItem
+              key={event.id}
+              event={event}
+              onEdit={(ev) => {
+                setEditingId(ev.id);
+                setFormData({
+                  date: ev.date,
+                  name: ev.name,
+                  location: ev.location,
+                  url: ev.url ?? "",
+                });
+              }}
+              onDelete={handleDelete}
+            />
           ))}
-        </div>
+        </Reorder.Group>
       </div>
     </div>
   );
@@ -503,6 +588,67 @@ type ReviewItem = {
   image?: string;
 };
 
+function ReviewDragItem({
+  review,
+  onEdit,
+  onDelete,
+}: {
+  review: ReviewItem;
+  onEdit: (review: ReviewItem) => void;
+  onDelete: (id: string) => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={review}
+      dragListener={false}
+      dragControls={dragControls}
+      className="admin-schedule__event admin-drag-item"
+      whileDrag={{ scale: 1.02, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", zIndex: 10 }}
+      transition={{ duration: 0.2 }}
+    >
+      <DragHandle dragControls={dragControls} />
+      <div className="admin-schedule__event-content">
+        <div className="admin-reviews__list-thumb-wrap">
+          {review.image && (
+            <img
+              src={review.image}
+              alt=""
+              className="admin-reviews__list-thumb"
+            />
+          )}
+        </div>
+        <div className="admin-schedule__event-date">
+          {"★".repeat(Math.max(1, Math.min(5, review.rating || 5)))}
+        </div>
+        <div className="admin-schedule__event-info">
+          <div className="admin-schedule__event-name">{review.title}</div>
+          <div className="admin-schedule__event-location">
+            {review.author}
+            {review.role ? ` — ${review.role}` : ""}
+            {review.location ? `, ${review.location}` : ""}
+          </div>
+        </div>
+      </div>
+      <div className="admin-schedule__event-actions">
+        <button
+          onClick={() => onEdit(review)}
+          className="admin-schedule__button admin-schedule__button--small"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => onDelete(review.id)}
+          className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
+        >
+          Delete
+        </button>
+      </div>
+    </Reorder.Item>
+  );
+}
+
 function ReviewsTab() {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -518,6 +664,7 @@ function ReviewsTab() {
   });
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const reorderTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadReviews();
@@ -534,6 +681,22 @@ function ReviewsTab() {
       setLoading(false);
     }
   }
+
+  const saveOrder = useCallback((newReviews: ReviewItem[]) => {
+    setReviews(newReviews);
+    if (reorderTimeout.current) clearTimeout(reorderTimeout.current);
+    reorderTimeout.current = setTimeout(async () => {
+      try {
+        await fetch("/api/reviews", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderedIds: newReviews.map((r) => r.id) }),
+        });
+      } catch (error) {
+        console.error("Error saving order:", error);
+      }
+    }, 600);
+  }, []);
 
   async function handleSave() {
     try {
@@ -818,59 +981,33 @@ function ReviewsTab() {
 
       <div className="admin-schedule__list">
         <h2>Reviews ({reviews.length})</h2>
-        <div className="admin-schedule__events admin-reviews__events">
+        <p className="admin-drag-hint">Drag items to reorder</p>
+        <Reorder.Group
+          axis="y"
+          values={reviews}
+          onReorder={saveOrder}
+          className="admin-schedule__events admin-reviews__events admin-drag-list"
+        >
           {reviews.map((r) => (
-            <div key={r.id} className="admin-schedule__event">
-              <div className="admin-schedule__event-content">
-                <div className="admin-reviews__list-thumb-wrap">
-                  {r.image && (
-                    <img
-                      src={r.image}
-                      alt=""
-                      className="admin-reviews__list-thumb"
-                    />
-                  )}
-                </div>
-                <div className="admin-schedule__event-date">
-                  {"★".repeat(Math.max(1, Math.min(5, r.rating || 5)))}
-                </div>
-                <div className="admin-schedule__event-info">
-                  <div className="admin-schedule__event-name">{r.title}</div>
-                  <div className="admin-schedule__event-location">
-                    {r.author}
-                    {r.role ? ` — ${r.role}` : ""}
-                    {r.location ? `, ${r.location}` : ""}
-                  </div>
-                </div>
-              </div>
-              <div className="admin-schedule__event-actions">
-                <button
-                  onClick={() => {
-                    setEditingId(r.id);
-                    setFormData({
-                      title: r.title,
-                      text: r.text,
-                      author: r.author,
-                      role: r.role ?? "",
-                      location: r.location ?? "",
-                      rating: String(r.rating ?? 5),
-                      image: r.image ?? "",
-                    });
-                  }}
-                  className="admin-schedule__button admin-schedule__button--small"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(r.id)}
-                  className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+            <ReviewDragItem
+              key={r.id}
+              review={r}
+              onEdit={(rev) => {
+                setEditingId(rev.id);
+                setFormData({
+                  title: rev.title,
+                  text: rev.text,
+                  author: rev.author,
+                  role: rev.role ?? "",
+                  location: rev.location ?? "",
+                  rating: String(rev.rating ?? 5),
+                  image: rev.image ?? "",
+                });
+              }}
+              onDelete={handleDelete}
+            />
           ))}
-        </div>
+        </Reorder.Group>
       </div>
     </div>
   );

@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { isAuthenticated } from "@/lib/auth";
-import { addReview, deleteReview, getReviews, updateReview } from "@/lib/db";
+import {
+  addReview,
+  deleteReview,
+  getReviews,
+  updateReview,
+  reorderReviews,
+} from "@/lib/db";
 
 function clampRating(value: unknown): number {
   const n = Number(value);
@@ -112,6 +118,32 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { orderedIds } = body;
+
+    if (!Array.isArray(orderedIds)) {
+      return NextResponse.json(
+        { error: "orderedIds array is required" },
+        { status: 400 }
+      );
+    }
+
+    const reordered = reorderReviews(orderedIds);
+    return NextResponse.json(reordered);
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },

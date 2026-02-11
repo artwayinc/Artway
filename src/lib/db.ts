@@ -78,6 +78,25 @@ export function deleteEvent(id: string): boolean {
   return true;
 }
 
+export function reorderSchedule(orderedIds: string[]): ScheduleEvent[] {
+  const events = getSchedule();
+  const map = new Map(events.map((e) => [e.id, e]));
+  const reordered: ScheduleEvent[] = [];
+  for (const id of orderedIds) {
+    const event = map.get(id);
+    if (event) {
+      reordered.push(event);
+      map.delete(id);
+    }
+  }
+  // Добавляем оставшиеся элементы, которых не было в orderedIds
+  for (const event of map.values()) {
+    reordered.push(event);
+  }
+  saveSchedule(reordered);
+  return reordered;
+}
+
 // Messages functions
 const messagesFile = path.join(dataDir, "messages.json");
 
@@ -225,4 +244,23 @@ export function deleteReview(id: string): boolean {
   }
   saveReviews(filtered);
   return true;
+}
+
+export function reorderReviews(orderedIds: string[]): Review[] {
+  const reviews = getReviews();
+  const map = new Map(reviews.map((r) => [r.id, r]));
+  const reordered: Review[] = [];
+  for (const id of orderedIds) {
+    const review = map.get(id);
+    if (review) {
+      reordered.push(review);
+      map.delete(id);
+    }
+  }
+  // Добавляем оставшиеся элементы, которых не было в orderedIds
+  for (const review of map.values()) {
+    reordered.push(review);
+  }
+  saveReviews(reordered);
+  return reordered;
 }

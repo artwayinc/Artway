@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import { getSchedule, addEvent, updateEvent, deleteEvent } from "@/lib/db";
+import {
+  getSchedule,
+  addEvent,
+  updateEvent,
+  deleteEvent,
+  reorderSchedule,
+} from "@/lib/db";
 
 export async function GET() {
   const events = getSchedule();
@@ -62,6 +68,32 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json(updated);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { orderedIds } = body;
+
+    if (!Array.isArray(orderedIds)) {
+      return NextResponse.json(
+        { error: "orderedIds array is required" },
+        { status: 400 },
+      );
+    }
+
+    const reordered = reorderSchedule(orderedIds);
+    return NextResponse.json(reordered);
   } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },

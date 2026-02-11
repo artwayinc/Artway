@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import path from "path";
+import fs from "fs";
 import { addMessage } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -44,6 +46,11 @@ export async function POST(request: Request) {
     ? String(record.subject ?? "").trim()
     : "Quote Request";
 
+  const itemInfoMode = String(record.itemInfoMode ?? "manual").trim();
+  const artworkPhotos = Array.isArray(record.artworkPhotos)
+    ? (record.artworkPhotos as string[])
+    : [];
+
   const messageValue = (() => {
     if (isLegacy) return String(record.message ?? "").trim();
 
@@ -51,18 +58,7 @@ export async function POST(request: Request) {
     const from = String(record.from ?? "").trim();
     const to = String(record.to ?? "").trim();
     const itemDescription = String(record.itemDescription ?? "").trim();
-    const declaredValue = String(record.declaredValue ?? "").trim();
     const notes = String(record.notes ?? "").trim();
-
-    const dimensions = (record.dimensions ?? {}) as Record<string, unknown>;
-    const dimH = String(dimensions.h ?? "").trim();
-    const dimW = String(dimensions.w ?? "").trim();
-    const dimD = String(dimensions.d ?? "").trim();
-    const dimUnit = String(dimensions.unit ?? "").trim();
-
-    const weight = (record.weight ?? {}) as Record<string, unknown>;
-    const weightValue = String(weight.value ?? "").trim();
-    const weightUnit = String(weight.unit ?? "").trim();
 
     const lines: string[] = [];
     lines.push("Quote Request");
@@ -72,16 +68,42 @@ export async function POST(request: Request) {
     lines.push(`Email: ${emailValue}`);
     lines.push(`Phone: +${phoneCountry} ${phoneNumber}`.trim());
     lines.push("");
-    lines.push(`From: ${from}`);
-    lines.push(`To: ${to}`);
-    lines.push("");
+    if (from || to) {
+      if (from) lines.push(`From: ${from}`);
+      if (to) lines.push(`To: ${to}`);
+      lines.push("");
+    }
     lines.push(`Item Description: ${itemDescription}`);
-    lines.push(
-      `Dimensions (H × W × D): ${dimH} × ${dimW} × ${dimD} ${dimUnit}`.trim()
-    );
-    if (weightValue) lines.push(`Weight: ${weightValue} ${weightUnit}`.trim());
-    if (declaredValue)
-      lines.push(`Declared Value / Insurance Value: ${declaredValue}`);
+
+    if (itemInfoMode === "link") {
+      const artworkLink = String(record.artworkLink ?? "").trim();
+      if (artworkLink) lines.push(`Artwork Link: ${artworkLink}`);
+      if (artworkPhotos.length > 0) {
+        lines.push(`Artwork Photos (${artworkPhotos.length}):`);
+        artworkPhotos.forEach((url, i) => lines.push(`  Photo ${i + 1}: ${url}`));
+      }
+    } else {
+      // Ручной ввод размеров
+      const declaredValue = String(record.declaredValue ?? "").trim();
+
+      const dimensions = (record.dimensions ?? {}) as Record<string, unknown>;
+      const dimH = String(dimensions.h ?? "").trim();
+      const dimW = String(dimensions.w ?? "").trim();
+      const dimD = String(dimensions.d ?? "").trim();
+      const dimUnit = String(dimensions.unit ?? "").trim();
+
+      const weight = (record.weight ?? {}) as Record<string, unknown>;
+      const weightValue = String(weight.value ?? "").trim();
+      const weightUnit = String(weight.unit ?? "").trim();
+
+      lines.push(
+        `Dimensions (H × W × D): ${dimH} × ${dimW} × ${dimD} ${dimUnit}`.trim()
+      );
+      if (weightValue) lines.push(`Weight: ${weightValue} ${weightUnit}`.trim());
+      if (declaredValue)
+        lines.push(`Declared Value / Insurance Value: ${declaredValue}`);
+    }
+
     if (notes) {
       lines.push("");
       lines.push("Notes:");
@@ -122,14 +144,24 @@ export async function POST(request: Request) {
     },
   });
 
-  const text = [
-    `Name: ${nameValue}`,
-    `Email: ${emailValue}`,
-    `Phone: +${phoneCountry} ${phoneNumber}`.trim(),
-    `Subject: ${subjectValue}`,
-    "",
-    messageValue,
-  ].join("\n");
+  // Вложения: фотографии предмета искусства (файлы из public/quote-uploads)
+  const attachments: { filename: string; content: Buffer }[] = [];
+  const publicDir = path.join(process.cwd(), "public");
+  for (let i = 0; i < artworkPhotos.length; i++) {
+    const urlPath = artworkPhotos[i].replace(/^\//, "");
+    const filePath = path.join(publicDir, urlPath);
+    if (fs.existsSync(filePath)) {
+      try {
+        const content = fs.readFileSync(filePath);
+        attachments.push({
+          filename: `artwork-photo-${i + 1}.webp`,
+          content,
+        });
+      } catch (err) {
+        console.error("Error reading attachment:", filePath, err);
+      }
+    }
+  }
 
   // Сохраняем сообщение в БД
   try {
@@ -162,7 +194,8 @@ export async function POST(request: Request) {
       to: MAIL_TO,
       replyTo: emailValue,
       subject: subjectDetails,
-      text,
+      text: messageValue,
+      attachments: attachments.length > 0 ? attachments : undefined,
     });
   } catch (error) {
     console.error("Error sending email:", error);

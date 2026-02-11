@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Reorder, useDragControls } from "framer-motion";
 import type { ScheduleEvent } from "@/lib/db";
 import type { ContactMessage } from "@/lib/db";
@@ -22,11 +23,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  async function checkAuth() {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/check");
       const data = await response.json();
@@ -41,7 +38,11 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   async function handleLogout() {
     try {
@@ -99,7 +100,11 @@ export default function AdminDashboardPage() {
   );
 }
 
-function DragHandle({ dragControls }: { dragControls: ReturnType<typeof useDragControls> }) {
+function DragHandle({
+  dragControls,
+}: {
+  dragControls: ReturnType<typeof useDragControls>;
+}) {
   return (
     <button
       className="admin-drag-handle"
@@ -138,14 +143,16 @@ function ScheduleEventItem({
       dragListener={false}
       dragControls={dragControls}
       className="admin-schedule__event admin-drag-item"
-      whileDrag={{ scale: 1.02, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", zIndex: 10 }}
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        zIndex: 10,
+      }}
       transition={{ duration: 0.2 }}
     >
       <DragHandle dragControls={dragControls} />
       <div className="admin-schedule__event-content">
-        <div className="admin-schedule__event-date">
-          {event.date || "—"}
-        </div>
+        <div className="admin-schedule__event-date">{event.date || "—"}</div>
         <div className="admin-schedule__event-info">
           <div className="admin-schedule__event-name">{event.name}</div>
           {event.location && (
@@ -372,11 +379,54 @@ function ScheduleTab() {
   );
 }
 
+function MessageContent({ text }: { text: string }) {
+  // Парсим текст сообщения: URL фотографий рендерим как картинки, ссылки — как ссылки
+  const lines = text.split("\n");
+  const photoUrlPattern = /^\s*Photo \d+:\s*(\/quote-uploads\/.+)$/;
+  const artworkLinkPattern = /^Artwork Link:\s*(https?:\/\/.+)$/;
+
+  return (
+    <>
+      {lines.map((line, i) => {
+        const photoMatch = line.match(photoUrlPattern);
+        if (photoMatch) {
+          return (
+            <div key={i} className="admin-messages__photo-wrap">
+              <Image
+                src={photoMatch[1]}
+                alt="Artwork photo"
+                width={300}
+                height={300}
+                className="admin-messages__photo"
+                unoptimized
+              />
+            </div>
+          );
+        }
+
+        const linkMatch = line.match(artworkLinkPattern);
+        if (linkMatch) {
+          return (
+            <p key={i}>
+              Artwork Link:{" "}
+              <a href={linkMatch[1]} target="_blank" rel="noopener noreferrer">
+                {linkMatch[1]}
+              </a>
+            </p>
+          );
+        }
+
+        return <p key={i}>{line || "\u00A0"}</p>;
+      })}
+    </>
+  );
+}
+
 function MessagesTab() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(
-    null
+    null,
   );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -568,7 +618,7 @@ function MessagesTab() {
               </p>
             </div>
             <div className="admin-messages__detail-message">
-              <p>{selectedMessage.message}</p>
+              <MessageContent text={selectedMessage.message} />
             </div>
           </div>
         )}
@@ -605,17 +655,24 @@ function ReviewDragItem({
       dragListener={false}
       dragControls={dragControls}
       className="admin-schedule__event admin-drag-item"
-      whileDrag={{ scale: 1.02, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", zIndex: 10 }}
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        zIndex: 10,
+      }}
       transition={{ duration: 0.2 }}
     >
       <DragHandle dragControls={dragControls} />
       <div className="admin-schedule__event-content">
         <div className="admin-reviews__list-thumb-wrap">
           {review.image && (
-            <img
+            <Image
               src={review.image}
               alt=""
+              width={80}
+              height={80}
               className="admin-reviews__list-thumb"
+              unoptimized
             />
           )}
         </div>
@@ -766,7 +823,7 @@ function ReviewsTab() {
     } finally {
       setImageUploading(false);
       e.target.value = "";
-      imageInputRef.current?.value && (imageInputRef.current.value = "");
+      if (imageInputRef.current) imageInputRef.current.value = "";
     }
   }
 
@@ -902,10 +959,13 @@ function ReviewsTab() {
             />
             {formData.image ? (
               <div className="admin-reviews__image-preview-wrap">
-                <img
+                <Image
                   src={formData.image}
                   alt=""
+                  width={200}
+                  height={200}
                   className="admin-reviews__image-preview"
+                  unoptimized
                 />
                 <div className="admin-reviews__image-actions">
                   <button

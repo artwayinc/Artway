@@ -20,11 +20,5 @@
       "database_name": "artway-db",
       "database_id": "63efa346-cc90-424e-83fe-24e56ef74616"
     }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "BUCKET",
-      "bucket_name": "artway-media"
-    }
   ]
 }

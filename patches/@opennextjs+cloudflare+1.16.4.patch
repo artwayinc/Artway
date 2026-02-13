@@ -2,13 +2,12 @@ diff --git a/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
 index 276b52e..5505498 100644
 --- a/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
 +++ b/node_modules/@opennextjs/cloudflare/dist/cli/build/bundle-server.js
-@@ -102,6 +102,9 @@ export async function bundleServer(buildOpts, projectOpts) {
+@@ -102,6 +102,8 @@ export async function bundleServer(buildOpts, projectOpts) {
              "./middleware/handler.mjs",
              // Do not bundle og when it is not used
              ...(useOg ? [] : ["next/dist/compiled/@vercel/og/index.edge.js"]),
 +            // sharp is native and cannot be bundled for Workers; upload routes return 503 on CF
 +            "sharp",
-+            /^sharp-/,
          ],
          alias: {
              // Workers have `fetch` so the `node-fetch` polyfill is not needed

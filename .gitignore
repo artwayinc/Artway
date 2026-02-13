@@ -42,6 +42,7 @@ yarn-error.log*
 
 # OpenNext / Cloudflare
 .open-next
+scripts/d1-migrate-data.sql
 
 # typescript
 *.tsbuildinfo

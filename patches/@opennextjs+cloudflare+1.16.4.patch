@@ -8,7 +8,6 @@ index 276b52e..5505498 100644
              ...(useOg ? [] : ["next/dist/compiled/@vercel/og/index.edge.js"]),
 +            // sharp is native and cannot be bundled for Workers; upload routes return 503 on CF
 +            "sharp",
-+            /^sharp-/,
          ],
          alias: {
              // Workers have `fetch` so the `node-fetch` polyfill is not needed

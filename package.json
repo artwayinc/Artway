@@ -12,7 +12,8 @@
     "optimize-images": "node scripts/optimize-images.js",
     "pages:build": "opennextjs-cloudflare build",
     "pages:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "pages:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
+    "pages:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "migrate:d1": "node scripts/migrate-json-to-d1.mjs"
   },
   "dependencies": {
     "@vercel/speed-insights": "1.3.1",

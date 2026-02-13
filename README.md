@@ -165,6 +165,25 @@ echo "[]" > data/schedule.json
    sudo chown -R $USER:$USER data/
    ```
 
+### Cloudflare D1
+
+При деплое на Cloudflare Pages данные хранятся в D1 (а не в JSON). Локально и на Vercel по-прежнему используются файлы из `data/*.json`.
+
+**Первичная настройка D1:**
+
+1. Создайте БД в дашборде Cloudflare (D1) и привяжите её к проекту (binding `DB`).
+2. Примените схему один раз:
+   ```bash
+   npx wrangler d1 execute artway-db --remote --file=./scripts/d1-schema.sql
+   ```
+3. Перенесите данные из JSON в D1 (один раз):
+   ```bash
+   npm run migrate:d1
+   npx wrangler d1 execute artway-db --remote --file=./scripts/d1-migrate-data.sql
+   ```
+
+Скрипт `migrate:d1` читает `data/schedule.json`, `data/messages.json`, `data/reviews.json` и генерирует `scripts/d1-migrate-data.sql`. После выполнения команды `wrangler d1 execute` эти данные появятся в D1, и сайт на `*.pages.dev` будет отображать их.
+
 ## Миграции
 
 Поскольку используется JSON файл, миграции выполняются вручную.

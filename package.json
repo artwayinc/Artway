@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "patch-package",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -21,12 +20,11 @@
     "next": "^16.1.5",
     "nodemailer": "7.0.12",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "sharp": "0.34.5"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "latest",
-    "patch-package": "^8.0.0",
+    "sharp": "0.34.5",
     "wrangler": "^4.59.2",
     "@types/node": "^20",
     "@types/nodemailer": "7.0.9",

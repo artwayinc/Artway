@@ -20,5 +20,11 @@
       "database_name": "artway-db",
       "database_id": "63efa346-cc90-424e-83fe-24e56ef74616"
     }
-  ]
+  ],
+  "vars": {
+    "ADMIN_USERNAME": "artway-admin",
+    "MAIL_TO": "info@artwayinc.com",
+    "NEXT_PUBLIC_SITE_URL": "https://artwayinc.com",
+    "SMTP_USER": "artwayinc.info@gmail.com"
+  }
 }

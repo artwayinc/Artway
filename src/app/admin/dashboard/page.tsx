@@ -130,10 +130,12 @@ function ScheduleEventItem({
   event,
   onEdit,
   onDelete,
+  onDragEnd,
 }: {
   event: ScheduleEvent;
   onEdit: (event: ScheduleEvent) => void;
   onDelete: (id: string) => void;
+  onDragEnd?: () => void;
 }) {
   const dragControls = useDragControls();
 
@@ -142,6 +144,7 @@ function ScheduleEventItem({
       value={event}
       dragListener={false}
       dragControls={dragControls}
+      onDragEnd={onDragEnd}
       className="admin-schedule__event admin-drag-item"
       whileDrag={{
         scale: 1.02,
@@ -200,7 +203,7 @@ function ScheduleTab() {
     location: "",
     url: "",
   });
-  const reorderTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastOrderRef = useRef<ScheduleEvent[]>([]);
 
   useEffect(() => {
     loadEvents();
@@ -211,6 +214,7 @@ function ScheduleTab() {
       const response = await fetch("/api/schedule");
       const data = await response.json();
       setEvents(data);
+      lastOrderRef.current = data;
     } catch (error) {
       console.error("Error loading events:", error);
     } finally {
@@ -220,18 +224,21 @@ function ScheduleTab() {
 
   const saveOrder = useCallback((newEvents: ScheduleEvent[]) => {
     setEvents(newEvents);
-    if (reorderTimeout.current) clearTimeout(reorderTimeout.current);
-    reorderTimeout.current = setTimeout(async () => {
-      try {
-        await fetch("/api/schedule", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderedIds: newEvents.map((e) => e.id) }),
-        });
-      } catch (error) {
-        console.error("Error saving order:", error);
-      }
-    }, 600);
+    lastOrderRef.current = newEvents;
+  }, []);
+
+  const persistScheduleOrder = useCallback(async () => {
+    const order = lastOrderRef.current;
+    if (!order.length) return;
+    try {
+      await fetch("/api/schedule", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: order.map((e) => e.id) }),
+      });
+    } catch (error) {
+      console.error("Error saving order:", error);
+    }
   }, []);
 
   async function handleSave() {
@@ -371,6 +378,7 @@ function ScheduleTab() {
                 });
               }}
               onDelete={handleDelete}
+              onDragEnd={persistScheduleOrder}
             />
           ))}
         </Reorder.Group>
@@ -624,10 +632,12 @@ function ReviewDragItem({
   review,
   onEdit,
   onDelete,
+  onDragEnd,
 }: {
   review: ReviewItem;
   onEdit: (review: ReviewItem) => void;
   onDelete: (id: string) => void;
+  onDragEnd?: () => void;
 }) {
   const dragControls = useDragControls();
 
@@ -636,6 +646,7 @@ function ReviewDragItem({
       value={review}
       dragListener={false}
       dragControls={dragControls}
+      onDragEnd={onDragEnd}
       className="admin-schedule__event admin-drag-item"
       whileDrag={{
         scale: 1.02,
@@ -703,7 +714,7 @@ function ReviewsTab() {
   });
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const reorderTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastOrderRef = useRef<ReviewItem[]>([]);
 
   useEffect(() => {
     loadReviews();
@@ -713,7 +724,9 @@ function ReviewsTab() {
     try {
       const response = await fetch("/api/reviews");
       const data = await response.json();
-      setReviews(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setReviews(list);
+      lastOrderRef.current = list;
     } catch (error) {
       console.error("Error loading reviews:", error);
     } finally {
@@ -723,18 +736,21 @@ function ReviewsTab() {
 
   const saveOrder = useCallback((newReviews: ReviewItem[]) => {
     setReviews(newReviews);
-    if (reorderTimeout.current) clearTimeout(reorderTimeout.current);
-    reorderTimeout.current = setTimeout(async () => {
-      try {
-        await fetch("/api/reviews", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderedIds: newReviews.map((r) => r.id) }),
-        });
-      } catch (error) {
-        console.error("Error saving order:", error);
-      }
-    }, 600);
+    lastOrderRef.current = newReviews;
+  }, []);
+
+  const persistReviewsOrder = useCallback(async () => {
+    const order = lastOrderRef.current;
+    if (!order.length) return;
+    try {
+      await fetch("/api/reviews", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: order.map((r) => r.id) }),
+      });
+    } catch (error) {
+      console.error("Error saving order:", error);
+    }
   }, []);
 
   async function handleSave() {
@@ -1047,6 +1063,7 @@ function ReviewsTab() {
                 });
               }}
               onDelete={handleDelete}
+              onDragEnd={persistReviewsOrder}
             />
           ))}
         </Reorder.Group>

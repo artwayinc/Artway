@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { getCloudflareEnv, getStore } from "@/lib/db";
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       location: location || "",
       ...(urlValue ? { url: urlValue } : {}),
     });
+    revalidatePath("/schedule");
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -66,6 +68,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
+    revalidatePath("/schedule");
     return NextResponse.json(updated);
   } catch (error) {
     return NextResponse.json(
@@ -94,6 +97,7 @@ export async function PATCH(request: NextRequest) {
     const env = await getCloudflareEnv();
     const store = await getStore(env);
     const reordered = await store.reorderSchedule(orderedIds);
+    revalidatePath("/schedule");
     return NextResponse.json(reordered);
   } catch (error) {
     return NextResponse.json(
@@ -123,6 +127,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
+    revalidatePath("/schedule");
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

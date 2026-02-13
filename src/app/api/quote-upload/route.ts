@@ -52,8 +52,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     try {
       fs.writeFileSync(outPath, buffer);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (writeErr) {
+    } catch {
       // No writable filesystem (e.g. Cloudflare Workers)
       return NextResponse.json(
         { error: "Image upload not available on this deployment." },

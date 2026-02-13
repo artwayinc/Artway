@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { getCloudflareEnv, getStore } from "@/lib/db";
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
       image,
     });
 
+    revalidatePath("/clients-and-projects");
     return NextResponse.json(created, { status: 201 });
   } catch {
     return NextResponse.json(
@@ -110,6 +112,7 @@ export async function PUT(request: NextRequest) {
       deleteReviewImage(oldImage);
     }
 
+    revalidatePath("/clients-and-projects");
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(
@@ -138,6 +141,7 @@ export async function PATCH(request: NextRequest) {
     const env = await getCloudflareEnv();
     const store = await getStore(env);
     const reordered = await store.reorderReviews(orderedIds);
+    revalidatePath("/clients-and-projects");
     return NextResponse.json(reordered);
   } catch {
     return NextResponse.json(
@@ -176,6 +180,7 @@ export async function DELETE(request: NextRequest) {
       deleteReviewImage(review.image);
     }
 
+    revalidatePath("/clients-and-projects");
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

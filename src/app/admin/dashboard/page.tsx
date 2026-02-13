@@ -380,30 +380,13 @@ function ScheduleTab() {
 }
 
 function MessageContent({ text }: { text: string }) {
-  // Парсим текст сообщения: URL фотографий рендерим как картинки, ссылки — как ссылки
+  // Парсим текст: ссылки рендерим как ссылки, остальное — текст (фото только в письме, не храним)
   const lines = text.split("\n");
-  const photoUrlPattern = /^\s*Photo \d+:\s*(\/quote-uploads\/.+)$/;
   const artworkLinkPattern = /^Artwork Link:\s*(https?:\/\/.+)$/;
 
   return (
     <>
       {lines.map((line, i) => {
-        const photoMatch = line.match(photoUrlPattern);
-        if (photoMatch) {
-          return (
-            <div key={i} className="admin-messages__photo-wrap">
-              <Image
-                src={photoMatch[1]}
-                alt="Artwork photo"
-                width={300}
-                height={300}
-                className="admin-messages__photo"
-                unoptimized
-              />
-            </div>
-          );
-        }
-
         const linkMatch = line.match(artworkLinkPattern);
         if (linkMatch) {
           return (
@@ -415,7 +398,6 @@ function MessageContent({ text }: { text: string }) {
             </p>
           );
         }
-
         return <p key={i}>{line || "\u00A0"}</p>;
       })}
     </>

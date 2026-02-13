@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { getReviews } from "@/lib/db";
+import { getCloudflareEnv, getStore } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Clients & Projects | Artway Fine Art Services",
@@ -11,8 +11,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ClientsAndProjectsPage() {
-  const reviews = getReviews();
+export default async function ClientsAndProjectsPage() {
+  const store = await getStore(await getCloudflareEnv());
+  const reviews = await store.getReviews();
   return (
     <section className="section">
       <div className="container">

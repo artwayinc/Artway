@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
 import { isAuthenticated } from "@/lib/auth";
-import {
-  addReview,
-  deleteReview,
-  getReviews,
-  updateReview,
-  reorderReviews,
-} from "@/lib/db";
+import { getCloudflareEnv, getStore } from "@/lib/db";
 
 function clampRating(value: unknown): number {
   const n = Number(value);
@@ -17,7 +9,9 @@ function clampRating(value: unknown): number {
 }
 
 export async function GET() {
-  const reviews = getReviews();
+  const env = await getCloudflareEnv();
+  const store = await getStore(env);
+  const reviews = await store.getReviews();
   return NextResponse.json(reviews);
 }
 
@@ -47,7 +41,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const created = addReview({
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const created = await store.addReview({
       title,
       text,
       author,
@@ -93,13 +89,14 @@ export async function PUT(request: NextRequest) {
           ? body.image.trim()
           : undefined;
 
-    const reviews = getReviews();
-    const existing = reviews.find((r) => r.id === id);
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const existing = (await store.getReviews()).find((r) => r.id === id);
     if (!existing) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
-    const updated = updateReview(id, patch);
+    const updated = await store.updateReview(id, patch);
     if (!updated) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
@@ -108,13 +105,9 @@ export async function PUT(request: NextRequest) {
     const newImage = updated.image;
     const shouldDeleteOldFile =
       oldImage && oldImage.startsWith("/reviews/") && oldImage !== newImage;
-    if (shouldDeleteOldFile) {
-      const filePath = path.join(process.cwd(), "public", oldImage);
-      try {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      } catch {
-        // ignore
-      }
+    if (shouldDeleteOldFile && process.env.CF_PAGES !== "1") {
+      const { deleteReviewImage } = await import("@/lib/delete-file-node");
+      deleteReviewImage(oldImage);
     }
 
     return NextResponse.json(updated);
@@ -142,7 +135,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const reordered = reorderReviews(orderedIds);
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const reordered = await store.reorderReviews(orderedIds);
     return NextResponse.json(reordered);
   } catch {
     return NextResponse.json(
@@ -164,24 +159,21 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const reviews = getReviews();
-    const review = reviews.find((r) => r.id === id);
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const review = (await store.getReviews()).find((r) => r.id === id);
     if (!review) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
-    const deleted = deleteReview(id);
+    const deleted = await store.deleteReview(id);
     if (!deleted) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
-    if (review.image && review.image.startsWith("/reviews/")) {
-      const filePath = path.join(process.cwd(), "public", review.image);
-      try {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      } catch {
-        // ignore
-      }
+    if (review.image && review.image.startsWith("/reviews/") && process.env.CF_PAGES !== "1") {
+      const { deleteReviewImage } = await import("@/lib/delete-file-node");
+      deleteReviewImage(review.image);
     }
 
     return NextResponse.json({ success: true });

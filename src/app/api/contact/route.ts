@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import path from "path";
 import fs from "fs";
-import { addMessage } from "@/lib/db";
+import { getCloudflareEnv, getStore } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -79,8 +79,7 @@ export async function POST(request: Request) {
       const artworkLink = String(record.artworkLink ?? "").trim();
       if (artworkLink) lines.push(`Artwork Link: ${artworkLink}`);
       if (artworkPhotos.length > 0) {
-        lines.push(`Artwork Photos (${artworkPhotos.length}):`);
-        artworkPhotos.forEach((url, i) => lines.push(`  Photo ${i + 1}: ${url}`));
+        lines.push(`Artwork photos: ${artworkPhotos.length} attached to email (not stored).`);
       }
     } else {
       // Ручной ввод размеров
@@ -163,9 +162,11 @@ export async function POST(request: Request) {
     }
   }
 
-  // Сохраняем сообщение в БД
+  // Сохраняем сообщение в БД (JSON на Vercel, D1 на Cloudflare)
   try {
-    addMessage({
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    await store.addMessage({
       name: nameValue,
       email: emailValue,
       phone: phoneNumber,
@@ -197,6 +198,17 @@ export async function POST(request: Request) {
       text: messageValue,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
+
+    // После отправки удаляем загруженные фото с диска (только в почте, в Messages не храним)
+    for (let i = 0; i < artworkPhotos.length; i++) {
+      const urlPath = artworkPhotos[i].replace(/^\//, "");
+      const filePath = path.join(process.cwd(), "public", urlPath);
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (err) {
+        console.error("Error deleting attachment after send:", filePath, err);
+      }
+    }
   } catch (error) {
     console.error("Error sending email:", error);
     // Возвращаем успех, так как сообщение уже сохранено в БД

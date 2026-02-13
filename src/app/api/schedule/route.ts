@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
-import {
-  getSchedule,
-  addEvent,
-  updateEvent,
-  deleteEvent,
-  reorderSchedule,
-} from "@/lib/db";
+import { getCloudflareEnv, getStore } from "@/lib/db";
 
 export async function GET() {
-  const events = getSchedule();
+  const env = await getCloudflareEnv();
+  const store = await getStore(env);
+  const events = await store.getSchedule();
   return NextResponse.json(events);
 }
 
@@ -27,7 +23,9 @@ export async function POST(request: NextRequest) {
     }
 
     const urlValue = typeof url === "string" ? url.trim() : "";
-    const newEvent = addEvent({
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const newEvent = await store.addEvent({
       date: date || "",
       name,
       location: location || "",
@@ -56,11 +54,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const urlValue = typeof url === "string" ? url.trim() : "";
-    const updated = updateEvent(id, {
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const updated = await store.updateEvent(id, {
       date,
       name,
       location,
-      // Если url пустой — убираем поле (не храним пустые строки)
       url: urlValue || undefined,
     });
     if (!updated) {
@@ -92,7 +91,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const reordered = reorderSchedule(orderedIds);
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const reordered = await store.reorderSchedule(orderedIds);
     return NextResponse.json(reordered);
   } catch (error) {
     return NextResponse.json(
@@ -115,7 +116,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const deleted = deleteEvent(id);
+    const env = await getCloudflareEnv();
+    const store = await getStore(env);
+    const deleted = await store.deleteEvent(id);
     if (!deleted) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }

@@ -1,266 +1,171 @@
-import fs from "fs";
-import path from "path";
+/**
+ * Unified storage: on Cloudflare (CF_PAGES) uses D1, otherwise JSON files.
+ * API unchanged for callers; use getStore(env) in API routes and then call store methods.
+ */
 
-const dataDir = path.join(process.cwd(), "data");
-const scheduleFile = path.join(dataDir, "schedule.json");
-const reviewsFile = path.join(dataDir, "reviews.json");
+import * as json from "./db-json";
 
-export interface ScheduleEvent {
-  id: string;
-  date: string;
-  name: string;
-  location: string;
-  url?: string;
-}
+export type { ScheduleEvent, ContactMessage, Review } from "./db-json";
 
-export function getSchedule(): ScheduleEvent[] {
-  try {
-    if (!fs.existsSync(scheduleFile)) {
-      return [];
-    }
-    const data = fs.readFileSync(scheduleFile, "utf-8");
-    const parsed = JSON.parse(data) as unknown;
-    // Делаем поле url опциональным для обратной совместимости
-    return Array.isArray(parsed) ? (parsed as ScheduleEvent[]) : [];
-  } catch (error) {
-    console.error("Error reading schedule:", error);
-    return [];
-  }
-}
+export type DataStore = {
+  getSchedule(): Promise<json.ScheduleEvent[]>;
+  saveSchedule(events: json.ScheduleEvent[]): Promise<void>;
+  getEventById(id: string): Promise<json.ScheduleEvent | null>;
+  addEvent(event: Omit<json.ScheduleEvent, "id">): Promise<json.ScheduleEvent>;
+  updateEvent(id: string, event: Partial<json.ScheduleEvent>): Promise<json.ScheduleEvent | null>;
+  deleteEvent(id: string): Promise<boolean>;
+  reorderSchedule(orderedIds: string[]): Promise<json.ScheduleEvent[]>;
+  getMessages(): Promise<json.ContactMessage[]>;
+  addMessage(message: Omit<json.ContactMessage, "id" | "createdAt" | "read">): Promise<json.ContactMessage>;
+  markMessageAsRead(id: string): Promise<boolean>;
+  deleteMessage(id: string): Promise<boolean>;
+  getReviews(): Promise<json.Review[]>;
+  addReview(review: Omit<json.Review, "id">): Promise<json.Review>;
+  updateReview(id: string, review: Partial<json.Review>): Promise<json.Review | null>;
+  deleteReview(id: string): Promise<boolean>;
+  reorderReviews(orderedIds: string[]): Promise<json.Review[]>;
+};
 
-export function saveSchedule(events: ScheduleEvent[]): void {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    fs.writeFileSync(scheduleFile, JSON.stringify(events, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error saving schedule:", error);
-    throw error;
-  }
-}
-
-export function getEventById(id: string): ScheduleEvent | null {
-  const events = getSchedule();
-  return events.find((event) => event.id === id) || null;
-}
-
-export function addEvent(event: Omit<ScheduleEvent, "id">): ScheduleEvent {
-  const events = getSchedule();
-  const newId = String(Date.now());
-  const newEvent: ScheduleEvent = { ...event, id: newId };
-  events.push(newEvent);
-  saveSchedule(events);
-  return newEvent;
-}
-
-export function updateEvent(
-  id: string,
-  event: Partial<ScheduleEvent>
-): ScheduleEvent | null {
-  const events = getSchedule();
-  const index = events.findIndex((e) => e.id === id);
-  if (index === -1) {
-    return null;
-  }
-  events[index] = { ...events[index], ...event };
-  saveSchedule(events);
-  return events[index];
-}
-
-export function deleteEvent(id: string): boolean {
-  const events = getSchedule();
-  const filtered = events.filter((e) => e.id !== id);
-  if (filtered.length === events.length) {
-    return false;
-  }
-  saveSchedule(filtered);
-  return true;
-}
-
-export function reorderSchedule(orderedIds: string[]): ScheduleEvent[] {
-  const events = getSchedule();
-  const map = new Map(events.map((e) => [e.id, e]));
-  const reordered: ScheduleEvent[] = [];
-  for (const id of orderedIds) {
-    const event = map.get(id);
-    if (event) {
-      reordered.push(event);
-      map.delete(id);
-    }
-  }
-  // Добавляем оставшиеся элементы, которых не было в orderedIds
-  for (const event of map.values()) {
-    reordered.push(event);
-  }
-  saveSchedule(reordered);
-  return reordered;
-}
-
-// Messages functions
-const messagesFile = path.join(dataDir, "messages.json");
-
-export interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  phoneCountry: string;
-  subject: string;
-  message: string;
-  createdAt: string;
-  read: boolean;
-}
-
-export function getMessages(): ContactMessage[] {
-  try {
-    if (!fs.existsSync(messagesFile)) {
-      return [];
-    }
-    const data = fs.readFileSync(messagesFile, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading messages:", error);
-    return [];
-  }
-}
-
-export function saveMessages(messages: ContactMessage[]): void {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error saving messages:", error);
-    throw error;
-  }
-}
-
-export function addMessage(
-  message: Omit<ContactMessage, "id" | "createdAt" | "read">
-): ContactMessage {
-  const messages = getMessages();
-  const newId = String(Date.now());
-  const newMessage: ContactMessage = {
-    ...message,
-    id: newId,
-    createdAt: new Date().toISOString(),
-    read: false,
+function createJsonStore(): DataStore {
+  return {
+    getSchedule: () => Promise.resolve(json.getSchedule()),
+    saveSchedule: (events) => {
+      json.saveSchedule(events);
+      return Promise.resolve();
+    },
+    getEventById: (id) => Promise.resolve(json.getSchedule().find((e) => e.id === id) ?? null),
+    addEvent: (event) => {
+      const events = json.getSchedule();
+      const newId = String(Date.now());
+      const newEvent = { ...event, id: newId };
+      events.push(newEvent);
+      json.saveSchedule(events);
+      return Promise.resolve(newEvent);
+    },
+    updateEvent: (id, event) => {
+      const events = json.getSchedule();
+      const index = events.findIndex((e) => e.id === id);
+      if (index === -1) return Promise.resolve(null);
+      events[index] = { ...events[index], ...event, id };
+      json.saveSchedule(events);
+      return Promise.resolve(events[index]);
+    },
+    deleteEvent: (id) => {
+      const events = json.getSchedule().filter((e) => e.id !== id);
+      if (events.length === json.getSchedule().length) return Promise.resolve(false);
+      json.saveSchedule(events);
+      return Promise.resolve(true);
+    },
+    reorderSchedule: (orderedIds) => {
+      const events = json.getSchedule();
+      const map = new Map(events.map((e) => [e.id, e]));
+      const reordered: json.ScheduleEvent[] = [];
+      for (const id of orderedIds) {
+        const e = map.get(id);
+        if (e) {
+          reordered.push(e);
+          map.delete(id);
+        }
+      }
+      for (const e of map.values()) reordered.push(e);
+      json.saveSchedule(reordered);
+      return Promise.resolve(reordered);
+    },
+    getMessages: () => Promise.resolve(json.getMessages()),
+    addMessage: (message) => {
+      const messages = json.getMessages();
+      const newId = String(Date.now());
+      const newMessage: json.ContactMessage = {
+        ...message,
+        id: newId,
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+      messages.unshift(newMessage);
+      json.saveMessages(messages);
+      return Promise.resolve(newMessage);
+    },
+    markMessageAsRead: (id) => {
+      const messages = json.getMessages();
+      const index = messages.findIndex((m) => m.id === id);
+      if (index === -1) return Promise.resolve(false);
+      messages[index].read = true;
+      json.saveMessages(messages);
+      return Promise.resolve(true);
+    },
+    deleteMessage: (id) => {
+      const messages = json.getMessages().filter((m) => m.id !== id);
+      if (messages.length === json.getMessages().length) return Promise.resolve(false);
+      json.saveMessages(messages);
+      return Promise.resolve(true);
+    },
+    getReviews: () => Promise.resolve(json.getReviews()),
+    addReview: (review) => {
+      const reviews = json.getReviews();
+      const newId = String(Date.now());
+      const newReview = { ...review, id: newId };
+      reviews.unshift(newReview);
+      json.saveReviews(reviews);
+      return Promise.resolve(newReview);
+    },
+    updateReview: (id, review) => {
+      const reviews = json.getReviews();
+      const index = reviews.findIndex((r) => r.id === id);
+      if (index === -1) return Promise.resolve(null);
+      reviews[index] = { ...reviews[index], ...review, id };
+      json.saveReviews(reviews);
+      return Promise.resolve(reviews[index]);
+    },
+    deleteReview: (id) => {
+      const reviews = json.getReviews().filter((r) => r.id !== id);
+      if (reviews.length === json.getReviews().length) return Promise.resolve(false);
+      json.saveReviews(reviews);
+      return Promise.resolve(true);
+    },
+    reorderReviews: (orderedIds) => {
+      const reviews = json.getReviews();
+      const map = new Map(reviews.map((r) => [r.id, r]));
+      const reordered: json.Review[] = [];
+      for (const id of orderedIds) {
+        const r = map.get(id);
+        if (r) {
+          reordered.push(r);
+          map.delete(id);
+        }
+      }
+      for (const r of map.values()) reordered.push(r);
+      json.saveReviews(reordered);
+      return Promise.resolve(reordered);
+    },
   };
-  messages.unshift(newMessage); // Добавляем в начало
-  saveMessages(messages);
-  return newMessage;
 }
 
-export function markMessageAsRead(id: string): boolean {
-  const messages = getMessages();
-  const index = messages.findIndex((m) => m.id === id);
-  if (index === -1) {
-    return false;
-  }
-  messages[index].read = true;
-  saveMessages(messages);
-  return true;
-}
-
-export function deleteMessage(id: string): boolean {
-  const messages = getMessages();
-  const filtered = messages.filter((m) => m.id !== id);
-  if (filtered.length === messages.length) {
-    return false;
-  }
-  saveMessages(filtered);
-  return true;
-}
-
-// Reviews functions
-export interface Review {
-  id: string;
-  rating: number; // 1..5
-  title: string;
-  text: string;
-  author: string;
-  role: string;
-  location: string;
-  /** URL картинки (например /reviews/xxx.webp), опционально */
-  image?: string;
-}
-
-export function getReviews(): Review[] {
+/**
+ * Returns Cloudflare env (with D1 binding) when running on Cloudflare; otherwise undefined.
+ * Supports OpenNext (@opennextjs/cloudflare) and legacy next-on-pages.
+ */
+export async function getCloudflareEnv(): Promise<unknown> {
   try {
-    if (!fs.existsSync(reviewsFile)) {
-      return [];
+    const openNext = await import("@opennextjs/cloudflare").catch(() => null);
+    if (openNext?.getCloudflareContext) {
+      const ctx = openNext.getCloudflareContext();
+      if (ctx?.env) return ctx.env;
     }
-    const data = fs.readFileSync(reviewsFile, "utf-8");
-    const parsed = JSON.parse(data) as unknown;
-    return Array.isArray(parsed) ? (parsed as Review[]) : [];
-  } catch (error) {
-    console.error("Error reading reviews:", error);
-    return [];
+  } catch {
+    // ignore
   }
+  return undefined;
 }
 
-export function saveReviews(reviews: Review[]): void {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    fs.writeFileSync(reviewsFile, JSON.stringify(reviews, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error saving reviews:", error);
-    throw error;
+/**
+ * Returns the data store for the current environment.
+ * - On Cloudflare (CF_PAGES=1): pass env from getCloudflareEnv() → uses D1.
+ * - Otherwise (Vercel, local): pass undefined → uses JSON files.
+ */
+export async function getStore(env?: unknown): Promise<DataStore> {
+  if (env) {
+    const d1 = await import("./db-d1");
+    if (d1.hasD1Binding(env)) return d1.createD1Store(env);
   }
-}
-
-export function addReview(review: Omit<Review, "id">): Review {
-  const reviews = getReviews();
-  const newId = String(Date.now());
-  const newReview: Review = { ...review, id: newId };
-  reviews.unshift(newReview);
-  saveReviews(reviews);
-  return newReview;
-}
-
-export function updateReview(
-  id: string,
-  review: Partial<Review>
-): Review | null {
-  const reviews = getReviews();
-  const index = reviews.findIndex((r) => r.id === id);
-  if (index === -1) {
-    return null;
-  }
-  reviews[index] = { ...reviews[index], ...review, id };
-  saveReviews(reviews);
-  return reviews[index];
-}
-
-export function deleteReview(id: string): boolean {
-  const reviews = getReviews();
-  const filtered = reviews.filter((r) => r.id !== id);
-  if (filtered.length === reviews.length) {
-    return false;
-  }
-  saveReviews(filtered);
-  return true;
-}
-
-export function reorderReviews(orderedIds: string[]): Review[] {
-  const reviews = getReviews();
-  const map = new Map(reviews.map((r) => [r.id, r]));
-  const reordered: Review[] = [];
-  for (const id of orderedIds) {
-    const review = map.get(id);
-    if (review) {
-      reordered.push(review);
-      map.delete(id);
-    }
-  }
-  // Добавляем оставшиеся элементы, которых не было в orderedIds
-  for (const review of map.values()) {
-    reordered.push(review);
-  }
-  saveReviews(reordered);
-  return reordered;
+  return createJsonStore();
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSchedule } from "@/lib/db";
+import { getCloudflareEnv, getStore } from "@/lib/db";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -33,8 +33,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SchedulePage() {
-  const events = getSchedule();
+export default async function SchedulePage() {
+  const store = await getStore(await getCloudflareEnv());
+  const events = await store.getSchedule();
   return (
     <section className="section">
       <div className="container">

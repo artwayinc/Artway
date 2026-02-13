@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import sharp from "sharp";
 
 const PUBLIC_DIR_NAME = "quote-uploads";
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -44,6 +43,18 @@ export async function POST(request: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    let sharp: typeof import("sharp") | null = null;
+    try {
+      sharp = (await import("sharp")).default;
+    } catch {
+      // sharp not available (e.g. Cloudflare Workers); uploads only work on Node (Vercel)
+    }
+    if (!sharp) {
+      return NextResponse.json(
+        { error: "Image upload not available on this deployment." },
+        { status: 503 }
+      );
+    }
     await sharp(buffer).webp({ quality: 85, effort: 6 }).toFile(outPath);
 
     const url = `/${PUBLIC_DIR_NAME}/${filename}`;

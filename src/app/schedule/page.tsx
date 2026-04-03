@@ -1,0 +1,36 @@
+import type { Metadata } from "next";
+import { getSchedule } from "@/lib/db";
+
+export const metadata: Metadata = {
+  title: "Event Schedule | Artway Fine Art Services",
+  description:
+    "Upcoming art fairs and event schedule for Artway Fine Art Services.",
+};
+
+export default function SchedulePage() {
+  const events = getSchedule();
+  return (
+    <section className="section">
+      <div className="container">
+        <h1 className="section__title">2025 Event Schedule</h1>
+        <div className="schedule">
+          {events.map((event) => (
+            <div key={event.id} className="schedule__item">
+              {event.date ? (
+                <p className="schedule__date">{event.date}</p>
+              ) : (
+                <span className="schedule__date schedule__date--empty">—</span>
+              )}
+              <div className="schedule__info">
+                <p className="schedule__name">{event.name}</p>
+                {event.location ? (
+                  <p className="schedule__location">{event.location}</p>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

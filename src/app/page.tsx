@@ -1,66 +1,62 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Artway Fine Art Services | Fine Art Shipping & Handling",
+  description:
+    "White glove fine art shipping, handling, packing, storage, and installation across the United States.",
+};
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <section className="hero">
+        <div className="container hero__content">
+          <p className="hero__eyebrow">Since 1995</p>
+          <h1 className="hero__title">Fine Art Shipping & Handling</h1>
+          <p className="hero__subtitle">
+            White glove delivery, packing, storage, and installation for
+            galleries, collectors, and institutions across the United States.
+          </p>
+          <a className="button" href="/quote-request">
+            Request a Quote
+          </a>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container">
+          <h2 className="section__title">About ARTWAY</h2>
+          <p className="section__text">
+            ARTWAY Fine Art Services is a full-service fine art shipping and
+            handling company with extensive experience in handling all forms of
+            art and antiques.
+          </p>
+          <p className="section__text">
+            Antique shows and exhibitions are our specialty. Since 1995 we have
+            worked closely with major show managements across the country to
+            make our clients’ show experience as smooth and profitable as
+            possible.
+          </p>
+          <p className="section__text">
+            At ARTWAY Fine Art Services, we pride ourselves in serving a great
+            number of dealers on the East Coast. We manage to keep our pricing
+            reasonable by consolidating dealers’ stock in transit while keeping
+            the individual approach at the show. ARTWAY FAS performs scheduled
+            pick-ups, catered to your needs all along the East Coast and across
+            the United States. Whether it is a simple delivery to the show or a
+            complete set up of the booth, we will arrange, organize and manage
+            the transfer of property and ensure the best service and safest
+            delivery.
+          </p>
+          <p className="section__text">
+            We specialize in custom packing, transporting and assembling of any
+            type, designer services, white glove delivery as well as handling
+            overweight and oversized items. ARTWAY FAS offers competitive prices
+            and personal approach on all kinds of services. Storage is available
+            and in some cases is free if ARTWAY FAS is your dedicated carrier.
           </p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </section>
+    </>
   );
 }

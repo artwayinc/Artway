@@ -1,25 +1,86 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { getImagePath } from "@/lib/paths";
 
 export const metadata: Metadata = {
   title: "Artway Fine Art Services | Fine Art Shipping & Handling",
   description:
-    "White glove fine art shipping, handling, packing, storage, and installation across the United States.",
+    "White glove fine art shipping, handling, packing, storage, and installation across the United States. Since 1995, serving galleries, collectors, and institutions nationwide.",
+  keywords: [
+    "fine art shipping",
+    "fine art shipping services",
+    "fine art shipping company",
+    "fine art shipping NYC",
+    "fine art shipping New York",
+    "fine art logistics",
+    "fine art logistics company",
+    "art logistics",
+    "fine art transportation",
+    "fine art transportation services",
+    "fine art handling",
+    "art handling services",
+    "professional art handlers",
+    "white glove delivery",
+    "white glove art delivery",
+    "art packing",
+    "fine art packing services",
+    "custom art crating",
+    "art storage",
+    "fine art storage",
+    "climate-controlled art storage",
+    "art installation",
+    "art transportation New York",
+    "art logistics NYC",
+    "museum art transport",
+    "gallery art transport",
+    "international fine art shipping",
+    "auction art shipping",
+    "exhibition art transport",
+    "fine art shipping Florida",
+    "fine art shipping Chicago",
+    "fine art shipping New Jersey",
+    "fine art shipping Connecticut",
+    "fine art shipping Pennsylvania",
+    "fine art shipping Hamptons",
+    "fine art shipping Long Island",
+    "art logistics East Coast",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Artway Fine Art Services | Fine Art Shipping & Handling",
+    description:
+      "White glove fine art shipping, handling, packing, storage, and installation across the United States.",
+    type: "website",
+  },
 };
 
 export default function Home() {
+  const heroBgImage = getImagePath("/main.webp");
+
   return (
     <>
-      <section className="hero">
+      <section
+        className="hero"
+        style={{
+          background: `linear-gradient(var(--hero-overlay), var(--hero-overlay)), url("${heroBgImage}") center/cover no-repeat`,
+        }}
+      >
         <div className="container hero__content">
           <p className="hero__eyebrow">Since 1995</p>
           <h1 className="hero__title">Fine Art Shipping & Handling</h1>
-          <p className="hero__subtitle">
-            White glove delivery, packing, storage, and installation for
-            galleries, collectors, and institutions across the United States.
+          <p className="hero__subtitle hero__subtitle--lead">
+            Full-service art logistics
           </p>
-          <a className="button" href="/quote-request">
+          <p className="hero__subtitle">
+            Custom packing, secure storage, nationwide and international
+            service, white-glove delivery, installation, and auction and
+            exhibition support, with pricing tailored to your needs.
+          </p>
+          <Link className="button" href="/quote-request">
             Request a Quote
-          </a>
+          </Link>
         </div>
       </section>
 

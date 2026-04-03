@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
+type ThemeMode = "light" | "dark" | "auto";
 
 // Функция для определения времени восхода и захода солнца (упрощенная версия)
 function getSunriseSunset(): { sunrise: number; sunset: number } {
@@ -27,45 +28,63 @@ function getThemeByTime(): Theme {
   return "light";
 }
 
-// Функция для получения начальной темы (работает только на клиенте)
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+// Функция для получения начального режима темы (работает только на клиенте)
+function getInitialThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return "auto";
 
-  const savedTheme = window.localStorage.getItem("theme") as Theme | null;
-  const savedAutoMode = window.localStorage.getItem("theme-auto");
-
-  if (savedAutoMode === "false" && savedTheme) {
-    // Ручной режим - используем сохраненную тему
-    return savedTheme;
+  const savedThemeMode = window.localStorage.getItem("theme-mode") as ThemeMode | null;
+  
+  if (savedThemeMode && (savedThemeMode === "light" || savedThemeMode === "dark" || savedThemeMode === "auto")) {
+    return savedThemeMode;
   }
 
-  // Автоматический режим - определяем тему по времени суток
-  return getThemeByTime();
+  // По умолчанию - автоматический режим
+  return "auto";
+}
+
+// Функция для получения фактической темы на основе режима
+function getEffectiveTheme(mode: ThemeMode): Theme {
+  if (mode === "auto") {
+    return getThemeByTime();
+  }
+  return mode;
 }
 
 export default function ThemeToggle() {
-  // Используем lazy initialization для правильной инициализации на клиенте
-  const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
+  // На сервере всегда "auto", на клиенте обновим после монтирования
+  const [themeMode, setThemeMode] = useState<ThemeMode>("auto");
+  const [mounted, setMounted] = useState(false);
 
-  // Применяем тему к DOM при монтировании и изменении
+  // Инициализируем режим темы на клиенте после монтирования
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    const initialMode = getInitialThemeMode();
+    setThemeMode(initialMode);
+    const effectiveTheme = getEffectiveTheme(initialMode);
+    document.documentElement.setAttribute("data-theme", effectiveTheme);
+  }, []);
+
+  // Применяем тему к DOM при изменении
+  useEffect(() => {
+    if (!mounted) return;
+
+    const effectiveTheme = getEffectiveTheme(themeMode);
+    document.documentElement.setAttribute("data-theme", effectiveTheme);
+
+    // Обновляем тему только в автоматическом режиме
+    if (themeMode !== "auto") {
+      return; // Не обновляем в ручном режиме
+    }
 
     // Обновляем тему каждый час и при изменении даты
     const updateTheme = () => {
-      const savedAutoMode = window.localStorage.getItem("theme-auto");
-      if (savedAutoMode === "false") {
-        return; // Не обновляем в ручном режиме
-      }
-
       const newTheme = getThemeByTime();
-      setTheme((currentTheme) => {
-        if (newTheme !== currentTheme) {
-          document.documentElement.setAttribute("data-theme", newTheme);
-          return newTheme;
-        }
-        return currentTheme;
-      });
+      const currentEffectiveTheme = getEffectiveTheme(themeMode);
+      
+      if (newTheme !== currentEffectiveTheme) {
+        document.documentElement.setAttribute("data-theme", newTheme);
+      }
     };
 
     const interval = setInterval(updateTheme, 3600000); // Проверка каждый час
@@ -79,30 +98,48 @@ export default function ThemeToggle() {
       clearInterval(interval);
       clearInterval(checkDateChange);
     };
-  }, [theme]);
+  }, [themeMode, mounted]);
 
   function toggleTheme() {
-    const nextTheme: Theme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
-    window.localStorage.setItem("theme", nextTheme);
-    window.localStorage.setItem("theme-auto", "false");
+    // Переключение: light -> dark -> auto -> light
+    const nextMode: ThemeMode = 
+      themeMode === "light" ? "dark" : 
+      themeMode === "dark" ? "auto" : 
+      "light";
+    
+    setThemeMode(nextMode);
+    const effectiveTheme = getEffectiveTheme(nextMode);
+    document.documentElement.setAttribute("data-theme", effectiveTheme);
+    window.localStorage.setItem("theme-mode", nextMode);
   }
 
   // Используем suppressHydrationWarning для предотвращения ошибок гидратации
-  // На сервере всегда рендерится "light", на клиенте - правильная тема
-  const displayTheme = theme;
+  // На сервере всегда рендерится "auto", на клиенте - правильный режим
+  const displayMode = themeMode;
+  const effectiveTheme = getEffectiveTheme(themeMode);
+
+  const getAriaLabel = () => {
+    if (displayMode === "light") return "Switch to dark theme";
+    if (displayMode === "dark") return "Switch to auto theme";
+    return "Switch to light theme";
+  };
+
+  const getTitle = () => {
+    if (displayMode === "light") return "Current: Light. Click to switch to Dark.";
+    if (displayMode === "dark") return "Current: Dark. Click to switch to Auto.";
+    return `Current: Auto (${effectiveTheme === "light" ? "Light" : "Dark"} based on time). Click to switch to Light.`;
+  };
 
   return (
     <button
       className="theme-toggle"
       onClick={toggleTheme}
       type="button"
-      aria-label={`Switch to ${displayTheme === "light" ? "dark" : "light"} theme`}
-      title={`Current theme: ${displayTheme === "light" ? "Light" : "Dark"}. Click to toggle.`}
+      aria-label={getAriaLabel()}
+      title={getTitle()}
       suppressHydrationWarning
     >
-      {displayTheme === "light" ? (
+      {displayMode === "light" ? (
         <svg
           className="theme-toggle__icon"
           width="20"
@@ -113,6 +150,7 @@ export default function ThemeToggle() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          suppressHydrationWarning
         >
           <circle cx="12" cy="12" r="5"></circle>
           <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -123,6 +161,21 @@ export default function ThemeToggle() {
           <line x1="21" y1="12" x2="23" y2="12"></line>
           <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      ) : displayMode === "dark" ? (
+        <svg
+          className="theme-toggle__icon"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          suppressHydrationWarning
+        >
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
       ) : (
         <svg
@@ -135,8 +188,10 @@ export default function ThemeToggle() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          suppressHydrationWarning
         >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
       )}
     </button>

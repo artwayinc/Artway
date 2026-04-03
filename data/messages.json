@@ -1,24 +1,13 @@
 [
   {
-    "name": "123",
-    "email": "qwe@qwe.ru",
-    "phone": "123",
+    "name": "test",
+    "email": "test@t.tt",
+    "phone": "",
     "phoneCountry": "US",
-    "subject": "1231",
-    "message": "12312",
-    "id": "1769438973913",
-    "createdAt": "2026-01-26T14:49:33.913Z",
-    "read": true
-  },
-  {
-    "name": "1",
-    "email": "qwe@qwe.ru",
-    "phone": "1",
-    "phoneCountry": "US",
-    "subject": "1",
-    "message": "1",
-    "id": "1769438596710",
-    "createdAt": "2026-01-26T14:43:16.710Z",
+    "subject": "Quote Request",
+    "message": "Quote Request\n\nFull Name: test\nEmail: test@t.tt\nPhone: +US\n\nItem Description: \nArtwork photos: 1 attached to email (not stored).",
+    "id": "1770971295432",
+    "createdAt": "2026-02-13T08:28:15.432Z",
     "read": true
   }
 ]

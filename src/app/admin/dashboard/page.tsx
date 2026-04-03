@@ -1,26 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Reorder, useDragControls } from "framer-motion";
 import type { ScheduleEvent } from "@/lib/db";
 import type { ContactMessage } from "@/lib/db";
 
 type Tab = "schedule" | "messages";
+type ReviewForm = {
+  title: string;
+  text: string;
+  author: string;
+  role: string;
+  location: string;
+  rating: string;
+  image: string;
+};
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("schedule");
+  const [activeTab, setActiveTab] = useState<Tab | "reviews">("schedule");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  async function checkAuth() {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/check");
       const data = await response.json();
-      
+
       if (!data.authenticated) {
         router.push("/admin");
         return;
@@ -31,7 +38,11 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   async function handleLogout() {
     try {
@@ -57,22 +68,128 @@ export default function AdminDashboardPage() {
 
       <div className="admin-tabs">
         <button
-          className={`admin-tabs__tab ${activeTab === "schedule" ? "admin-tabs__tab--active" : ""}`}
+          className={`admin-tabs__tab ${
+            activeTab === "schedule" ? "admin-tabs__tab--active" : ""
+          }`}
           onClick={() => setActiveTab("schedule")}
         >
           Schedule
         </button>
         <button
-          className={`admin-tabs__tab ${activeTab === "messages" ? "admin-tabs__tab--active" : ""}`}
+          className={`admin-tabs__tab ${
+            activeTab === "messages" ? "admin-tabs__tab--active" : ""
+          }`}
           onClick={() => setActiveTab("messages")}
         >
           Messages
+        </button>
+        <button
+          className={`admin-tabs__tab ${
+            activeTab === "reviews" ? "admin-tabs__tab--active" : ""
+          }`}
+          onClick={() => setActiveTab("reviews")}
+        >
+          Reviews
         </button>
       </div>
 
       {activeTab === "schedule" && <ScheduleTab />}
       {activeTab === "messages" && <MessagesTab />}
+      {activeTab === "reviews" && <ReviewsTab />}
     </div>
+  );
+}
+
+function DragHandle({
+  dragControls,
+}: {
+  dragControls: ReturnType<typeof useDragControls>;
+}) {
+  return (
+    <button
+      className="admin-drag-handle"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        dragControls.start(e);
+      }}
+      aria-label="Drag to reorder"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="5" cy="3" r="1.5" />
+        <circle cx="11" cy="3" r="1.5" />
+        <circle cx="5" cy="8" r="1.5" />
+        <circle cx="11" cy="8" r="1.5" />
+        <circle cx="5" cy="13" r="1.5" />
+        <circle cx="11" cy="13" r="1.5" />
+      </svg>
+    </button>
+  );
+}
+
+function ScheduleEventItem({
+  event,
+  onEdit,
+  onDelete,
+  onDragEnd,
+}: {
+  event: ScheduleEvent;
+  onEdit: (event: ScheduleEvent) => void;
+  onDelete: (id: string) => void;
+  onDragEnd?: () => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={event}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={onDragEnd}
+      className="admin-schedule__event admin-drag-item"
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        zIndex: 10,
+      }}
+      transition={{ duration: 0.2 }}
+    >
+      <DragHandle dragControls={dragControls} />
+      <div className="admin-schedule__event-content">
+        <div className="admin-schedule__event-date">{event.date || "—"}</div>
+        <div className="admin-schedule__event-info">
+          <div className="admin-schedule__event-name">{event.name}</div>
+          {event.location && (
+            <div className="admin-schedule__event-location">
+              {event.location}
+            </div>
+          )}
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-schedule__event-url"
+            >
+              {event.url}
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="admin-schedule__event-actions">
+        <button
+          onClick={() => onEdit(event)}
+          className="admin-schedule__button admin-schedule__button--small"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => onDelete(event.id)}
+          className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
+        >
+          Delete
+        </button>
+      </div>
+    </Reorder.Item>
   );
 }
 
@@ -80,7 +197,13 @@ function ScheduleTab() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ date: "", name: "", location: "", url: "" });
+  const [formData, setFormData] = useState({
+    date: "",
+    name: "",
+    location: "",
+    url: "",
+  });
+  const lastOrderRef = useRef<ScheduleEvent[]>([]);
 
   useEffect(() => {
     loadEvents();
@@ -91,12 +214,32 @@ function ScheduleTab() {
       const response = await fetch("/api/schedule");
       const data = await response.json();
       setEvents(data);
+      lastOrderRef.current = data;
     } catch (error) {
       console.error("Error loading events:", error);
     } finally {
       setLoading(false);
     }
   }
+
+  const saveOrder = useCallback((newEvents: ScheduleEvent[]) => {
+    setEvents(newEvents);
+    lastOrderRef.current = newEvents;
+  }, []);
+
+  const persistScheduleOrder = useCallback(async () => {
+    const order = lastOrderRef.current;
+    if (!order.length) return;
+    try {
+      await fetch("/api/schedule", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: order.map((e) => e.id) }),
+      });
+    } catch (error) {
+      console.error("Error saving order:", error);
+    }
+  }, []);
 
   async function handleSave() {
     try {
@@ -150,7 +293,9 @@ function ScheduleTab() {
             <input
               type="text"
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
               placeholder="e.g., Jan 9 - 13"
             />
           </div>
@@ -159,7 +304,9 @@ function ScheduleTab() {
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Event name"
               required
             />
@@ -169,22 +316,29 @@ function ScheduleTab() {
             <input
               type="text"
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, location: e.target.value })
+              }
               placeholder="Event location"
             />
           </div>
           <div className="admin-schedule__field">
-            <label>URL</label>
+            <label>Event URL (optional)</label>
             <input
               type="url"
               value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              placeholder="https://example.com/event"
+              onChange={(e) =>
+                setFormData({ ...formData, url: e.target.value })
+              }
+              placeholder="https://..."
             />
           </div>
         </div>
         <div className="admin-schedule__form-actions">
-          <button onClick={handleSave} className="admin-schedule__button admin-schedule__button--primary">
+          <button
+            onClick={handleSave}
+            className="admin-schedule__button admin-schedule__button--primary"
+          >
             {editingId ? "Update" : "Add"} Event
           </button>
           {editingId && (
@@ -203,58 +357,83 @@ function ScheduleTab() {
 
       <div className="admin-schedule__list">
         <h2>Events ({events.length})</h2>
-        <div className="admin-schedule__events">
+        <p className="admin-drag-hint">Drag items to reorder</p>
+        <Reorder.Group
+          axis="y"
+          values={events}
+          onReorder={saveOrder}
+          className="admin-schedule__events admin-drag-list"
+        >
           {events.map((event) => (
-            <div key={event.id} className="admin-schedule__event">
-              <div className="admin-schedule__event-content">
-                <div className="admin-schedule__event-date">
-                  {event.date || "—"}
-                </div>
-                <div className="admin-schedule__event-info">
-                  <div className="admin-schedule__event-name">{event.name}</div>
-                  {event.location && (
-                    <div className="admin-schedule__event-location">{event.location}</div>
-                  )}
-                    {event.url && (
-                      <a className="admin-schedule__event-link" href={event.url} target="_blank" rel="noreferrer">
-                        {event.url}
-                      </a>
-                    )}
-                </div>
-              </div>
-              <div className="admin-schedule__event-actions">
-                <button
-                  onClick={() => {
-                    setEditingId(event.id);
-                    setFormData({ date: event.date, name: event.name, location: event.location, url: event.url || "" });
-                  }}
-                  className="admin-schedule__button admin-schedule__button--small"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(event.id)}
-                  className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+            <ScheduleEventItem
+              key={event.id}
+              event={event}
+              onEdit={(ev) => {
+                setEditingId(ev.id);
+                setFormData({
+                  date: ev.date,
+                  name: ev.name,
+                  location: ev.location,
+                  url: ev.url ?? "",
+                });
+              }}
+              onDelete={handleDelete}
+              onDragEnd={persistScheduleOrder}
+            />
           ))}
-        </div>
+        </Reorder.Group>
       </div>
     </div>
+  );
+}
+
+function MessageContent({ text }: { text: string }) {
+  // Парсим текст: ссылки рендерим как ссылки, остальное — текст (фото только в письме, не храним)
+  const lines = text.split("\n");
+  const artworkLinkPattern = /^Artwork Link:\s*(https?:\/\/.+)$/;
+
+  return (
+    <>
+      {lines.map((line, i) => {
+        const linkMatch = line.match(artworkLinkPattern);
+        if (linkMatch) {
+          return (
+            <p key={i}>
+              Artwork Link:{" "}
+              <a href={linkMatch[1]} target="_blank" rel="noopener noreferrer">
+                {linkMatch[1]}
+              </a>
+            </p>
+          );
+        }
+        return <p key={i}>{line || "\u00A0"}</p>;
+      })}
+    </>
   );
 }
 
 function MessagesTab() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(
+    null,
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     loadMessages();
   }, []);
+
+  // Вычисляем значения для пагинации
+  const totalPages = Math.ceil(messages.length / itemsPerPage);
+
+  // Сбрасываем на первую страницу, если текущая страница больше доступных
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   async function loadMessages() {
     try {
@@ -295,6 +474,11 @@ function MessagesTab() {
       if (selectedMessage?.id === id) {
         setSelectedMessage(null);
       }
+      // Если текущая страница стала пустой, переходим на предыдущую
+      const totalPages = Math.ceil((messages.length - 1) / itemsPerPage);
+      if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+      }
     } catch (error) {
       console.error("Error deleting message:", error);
       alert("Error deleting message");
@@ -306,6 +490,9 @@ function MessagesTab() {
   }
 
   const unreadCount = messages.filter((m) => !m.read).length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMessages = messages.slice(startIndex, endIndex);
 
   return (
     <div className="admin-messages">
@@ -321,33 +508,72 @@ function MessagesTab() {
           {messages.length === 0 ? (
             <p className="admin-messages__empty">No messages yet</p>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`admin-messages__item ${!message.read ? "admin-messages__item--unread" : ""} ${selectedMessage?.id === message.id ? "admin-messages__item--selected" : ""}`}
-                onClick={() => {
-                  setSelectedMessage(message);
-                  if (!message.read) {
-                    handleMarkAsRead(message.id);
-                  }
-                }}
-              >
-                <div className="admin-messages__item-header">
-                  <div className="admin-messages__item-name">{message.name}</div>
-                  {!message.read && <span className="admin-messages__item-dot"></span>}
+            <>
+              {paginatedMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`admin-messages__item ${
+                    !message.read ? "admin-messages__item--unread" : ""
+                  } ${
+                    selectedMessage?.id === message.id
+                      ? "admin-messages__item--selected"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedMessage(message);
+                    if (!message.read) {
+                      handleMarkAsRead(message.id);
+                    }
+                  }}
+                >
+                  <div className="admin-messages__item-header">
+                    <div className="admin-messages__item-name">
+                      {message.name}
+                    </div>
+                    {!message.read && (
+                      <span className="admin-messages__item-dot"></span>
+                    )}
+                  </div>
+                  <div className="admin-messages__item-subject">
+                    {message.subject}
+                  </div>
+                  <div className="admin-messages__item-date">
+                    {new Date(message.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
                 </div>
-                <div className="admin-messages__item-subject">{message.subject}</div>
-                <div className="admin-messages__item-date">
-                  {new Date(message.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+              ))}
+              {totalPages > 1 && (
+                <div className="admin-messages__pagination">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="admin-messages__pagination-button"
+                  >
+                    Previous
+                  </button>
+                  <div className="admin-messages__pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="admin-messages__pagination-button"
+                  >
+                    Next
+                  </button>
                 </div>
-              </div>
-            ))
+              )}
+            </>
           )}
         </div>
 
@@ -363,16 +589,484 @@ function MessagesTab() {
               </button>
             </div>
             <div className="admin-messages__detail-info">
-              <p><strong>From:</strong> {selectedMessage.name}</p>
-              <p><strong>Email:</strong> <a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a></p>
-              <p><strong>Phone:</strong> +{selectedMessage.phoneCountry} {selectedMessage.phone}</p>
-              <p><strong>Date:</strong> {new Date(selectedMessage.createdAt).toLocaleString("en-US")}</p>
+              <p>
+                <strong>From:</strong> {selectedMessage.name}
+              </p>
+              <p>
+                <strong>Email:</strong>{" "}
+                <a href={`mailto:${selectedMessage.email}`}>
+                  {selectedMessage.email}
+                </a>
+              </p>
+              <p>
+                <strong>Phone:</strong> +{selectedMessage.phoneCountry}{" "}
+                {selectedMessage.phone}
+              </p>
+              <p>
+                <strong>Date:</strong>{" "}
+                {new Date(selectedMessage.createdAt).toLocaleString("en-US")}
+              </p>
             </div>
             <div className="admin-messages__detail-message">
-              <p>{selectedMessage.message}</p>
+              <MessageContent text={selectedMessage.message} />
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+type ReviewItem = {
+  id: string;
+  rating: number;
+  title: string;
+  text: string;
+  author: string;
+  role: string;
+  location: string;
+  image?: string;
+};
+
+function ReviewDragItem({
+  review,
+  onEdit,
+  onDelete,
+  onDragEnd,
+}: {
+  review: ReviewItem;
+  onEdit: (review: ReviewItem) => void;
+  onDelete: (id: string) => void;
+  onDragEnd?: () => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={review}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={onDragEnd}
+      className="admin-schedule__event admin-drag-item"
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        zIndex: 10,
+      }}
+      transition={{ duration: 0.2 }}
+    >
+      <DragHandle dragControls={dragControls} />
+      <div className="admin-schedule__event-content">
+        <div className="admin-reviews__list-thumb-wrap">
+          {review.image && (
+            <Image
+              src={review.image}
+              alt=""
+              width={80}
+              height={80}
+              className="admin-reviews__list-thumb"
+              unoptimized
+            />
+          )}
+        </div>
+        <div className="admin-schedule__event-date">
+          {"★".repeat(Math.max(1, Math.min(5, review.rating || 5)))}
+        </div>
+        <div className="admin-schedule__event-info">
+          <div className="admin-schedule__event-name">{review.title}</div>
+          <div className="admin-schedule__event-location">
+            {review.author}
+            {review.role ? ` — ${review.role}` : ""}
+            {review.location ? `, ${review.location}` : ""}
+          </div>
+        </div>
+      </div>
+      <div className="admin-schedule__event-actions">
+        <button
+          onClick={() => onEdit(review)}
+          className="admin-schedule__button admin-schedule__button--small"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => onDelete(review.id)}
+          className="admin-schedule__button admin-schedule__button--small admin-schedule__button--danger"
+        >
+          Delete
+        </button>
+      </div>
+    </Reorder.Item>
+  );
+}
+
+function ReviewsTab() {
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ReviewForm>({
+    title: "",
+    text: "",
+    author: "",
+    role: "",
+    location: "",
+    rating: "5",
+    image: "",
+  });
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const lastOrderRef = useRef<ReviewItem[]>([]);
+
+  useEffect(() => {
+    loadReviews();
+  }, []);
+
+  async function loadReviews() {
+    try {
+      const response = await fetch("/api/reviews");
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : [];
+      setReviews(list);
+      lastOrderRef.current = list;
+    } catch (error) {
+      console.error("Error loading reviews:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const saveOrder = useCallback((newReviews: ReviewItem[]) => {
+    setReviews(newReviews);
+    lastOrderRef.current = newReviews;
+  }, []);
+
+  const persistReviewsOrder = useCallback(async () => {
+    const order = lastOrderRef.current;
+    if (!order.length) return;
+    try {
+      await fetch("/api/reviews", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: order.map((r) => r.id) }),
+      });
+    } catch (error) {
+      console.error("Error saving order:", error);
+    }
+  }, []);
+
+  async function handleSave() {
+    try {
+      const payload = {
+        ...formData,
+        rating: Number(formData.rating || 5),
+      };
+
+      if (editingId) {
+        await fetch("/api/reviews", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingId,
+            ...payload,
+            image: formData.image,
+          }),
+        });
+      } else {
+        await fetch("/api/reviews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            image: formData.image || undefined,
+          }),
+        });
+      }
+
+      await loadReviews();
+      setEditingId(null);
+      setFormData({
+        title: "",
+        text: "",
+        author: "",
+        role: "",
+        location: "",
+        rating: "5",
+        image: "",
+      });
+    } catch (error) {
+      console.error("Error saving review:", error);
+      alert("Error saving review");
+    }
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/reviews/upload", {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Upload failed");
+      }
+      const data = (await res.json()) as { url: string };
+      setFormData((prev) => ({ ...prev, image: data.url }));
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(err instanceof Error ? err.message : "Failed to upload image");
+    } finally {
+      setImageUploading(false);
+      e.target.value = "";
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to delete this review?")) {
+      return;
+    }
+    try {
+      await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
+      await loadReviews();
+      if (editingId === id) {
+        setEditingId(null);
+        setFormData({
+          title: "",
+          text: "",
+          author: "",
+          role: "",
+          location: "",
+          rating: "5",
+          image: "",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      alert("Error deleting review");
+    }
+  }
+
+  if (loading) {
+    return <div>Loading reviews...</div>;
+  }
+
+  return (
+    <div>
+      <div className="admin-schedule__form">
+        <h2>{editingId ? "Edit Review" : "Add New Review"}</h2>
+        <div className="admin-schedule__form-grid">
+          <div className="admin-schedule__field">
+            <label>Title *</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              placeholder="Review title"
+              required
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Rating (1–5)</label>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={formData.rating}
+              onChange={(e) =>
+                setFormData({ ...formData, rating: e.target.value })
+              }
+              placeholder="5"
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Author *</label>
+            <input
+              type="text"
+              value={formData.author}
+              onChange={(e) =>
+                setFormData({ ...formData, author: e.target.value })
+              }
+              placeholder="Name"
+              required
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Role</label>
+            <input
+              type="text"
+              value={formData.role}
+              onChange={(e) =>
+                setFormData({ ...formData, role: e.target.value })
+              }
+              placeholder="e.g., Private Collector"
+            />
+          </div>
+          <div className="admin-schedule__field">
+            <label>Location</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) =>
+                setFormData({ ...formData, location: e.target.value })
+              }
+              placeholder="e.g., New York City"
+            />
+          </div>
+          <div
+            className="admin-schedule__field"
+            style={{ gridColumn: "1 / -1" }}
+          >
+            <label>Text *</label>
+            <textarea
+              value={formData.text}
+              onChange={(e) =>
+                setFormData({ ...formData, text: e.target.value })
+              }
+              rows={6}
+              placeholder="Review text"
+              required
+              style={{
+                border: "1px solid var(--line)",
+                padding: "10px 12px",
+                fontFamily: "inherit",
+                fontSize: "1rem",
+                background: "var(--background)",
+                color: "var(--foreground)",
+              }}
+            />
+          </div>
+          <div
+            className="admin-schedule__field admin-reviews__image-field"
+            style={{ gridColumn: "1 / -1" }}
+          >
+            <label>Image (optional)</label>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageUpload}
+              disabled={imageUploading}
+              style={{ display: "none" }}
+              aria-hidden
+            />
+            {formData.image ? (
+              <div className="admin-reviews__image-preview-wrap">
+                <Image
+                  src={formData.image}
+                  alt=""
+                  width={200}
+                  height={200}
+                  className="admin-reviews__image-preview"
+                  unoptimized
+                />
+                <div className="admin-reviews__image-actions">
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={imageUploading}
+                    className="admin-schedule__button admin-schedule__button--small"
+                  >
+                    {imageUploading ? "Uploading…" : "Change"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, image: "" }))
+                    }
+                    className="admin-schedule__button admin-schedule__button--small"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={imageUploading}
+                className="admin-reviews__upload-trigger"
+              >
+                {imageUploading ? (
+                  "Uploading…"
+                ) : (
+                  <>
+                    <span className="admin-reviews__upload-label">
+                      Upload image
+                    </span>
+                    <span className="admin-reviews__upload-hint">
+                      JPEG, PNG, WebP, GIF — file will be saved as WebP
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="admin-schedule__form-actions">
+          <button
+            onClick={handleSave}
+            className="admin-schedule__button admin-schedule__button--primary"
+          >
+            {editingId ? "Update" : "Add"} Review
+          </button>
+          {editingId && (
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setFormData({
+                  title: "",
+                  text: "",
+                  author: "",
+                  role: "",
+                  location: "",
+                  rating: "5",
+                  image: "",
+                });
+              }}
+              className="admin-schedule__button"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="admin-schedule__list">
+        <h2>Reviews ({reviews.length})</h2>
+        <p className="admin-drag-hint">Drag items to reorder</p>
+        <Reorder.Group
+          axis="y"
+          values={reviews}
+          onReorder={saveOrder}
+          className="admin-schedule__events admin-reviews__events admin-drag-list"
+        >
+          {reviews.map((r) => (
+            <ReviewDragItem
+              key={r.id}
+              review={r}
+              onEdit={(rev) => {
+                setEditingId(rev.id);
+                setFormData({
+                  title: rev.title,
+                  text: rev.text,
+                  author: rev.author,
+                  role: rev.role ?? "",
+                  location: rev.location ?? "",
+                  rating: String(rev.rating ?? 5),
+                  image: rev.image ?? "",
+                });
+              }}
+              onDelete={handleDelete}
+              onDragEnd={persistReviewsOrder}
+            />
+          ))}
+        </Reorder.Group>
       </div>
     </div>
   );

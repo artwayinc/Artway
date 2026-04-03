@@ -6,7 +6,7 @@
 
 ### Требования
 
-- Node.js 18+ 
+- Node.js 18+
 - npm, yarn, pnpm или bun
 
 ### Установка зависимостей
@@ -61,6 +61,41 @@ npm run build
 npm start
 ```
 
+## Оптимизация изображений
+
+Проект использует оптимизированные изображения для улучшения производительности сайта. Изображения из `public/services/` и главное изображение `public/main.jpg` конвертируются в формат WebP.
+
+### Запуск оптимизации
+
+Для оптимизации всех изображений запустите:
+
+```bash
+npm run optimize-images
+```
+
+Скрипт автоматически:
+
+- Конвертирует PNG изображения из `public/services/` в WebP формат (уменьшение размера на 90-93%)
+- Конвертирует `public/main.jpg` в `public/main.webp` (как и изображения в services/)
+- Выводит статистику по каждому обработанному файлу
+
+### Когда запускать оптимизацию
+
+Запускайте оптимизацию в следующих случаях:
+
+- После добавления новых изображений в `public/services/`
+- После обновления `public/main.jpg`
+- Перед деплоем в продакшн
+
+### Форматы изображений
+
+- **Изображения services/**: Используйте формат WebP (создается автоматически при оптимизации)
+- **Главное изображение**: Исходник `public/main.jpg` конвертируется в `public/main.webp` (как в services/)
+
+### Примечание
+
+В проекте используется статический экспорт (`output: "export"`), поэтому автоматическая оптимизация Next.js Image отключена (`images: { unoptimized: true }`). Все изображения оптимизируются вручную с помощью скрипта `optimize-images`.
+
 ## База данных
 
 Проект использует простую файловую БД на основе JSON файла.
@@ -94,11 +129,13 @@ echo "[]" > data/schedule.json
 ### Настройка БД на сервере
 
 1. **Создайте папку для данных:**
+
    ```bash
    mkdir -p /path/to/project/data
    ```
 
 2. **Установите права доступа:**
+
    ```bash
    chmod 755 /path/to/project/data
    chmod 644 /path/to/project/data/schedule.json
@@ -109,22 +146,43 @@ echo "[]" > data/schedule.json
    - Убедитесь, что у пользователя есть права на запись в папку `data`
 
 4. **Для продакшна (PM2, systemd и т.д.):**
+
    ```bash
    # Пример для systemd
    # Убедитесь, что User= в service файле имеет права на запись
    ```
 
 5. **Проверка прав доступа:**
+
    ```bash
    # Проверить текущего пользователя
    whoami
-   
+
    # Проверить права на папку
    ls -la data/
-   
+
    # Если нужно изменить владельца
    sudo chown -R $USER:$USER data/
    ```
+
+### Cloudflare D1
+
+При деплое на Cloudflare Pages данные хранятся в D1 (а не в JSON). Локально и на Vercel по-прежнему используются файлы из `data/*.json`.
+
+**Первичная настройка D1:**
+
+1. Создайте БД в дашборде Cloudflare (D1) и привяжите её к проекту (binding `DB`).
+2. Примените схему один раз:
+   ```bash
+   npx wrangler d1 execute artway-db --remote --file=./scripts/d1-schema.sql
+   ```
+3. Перенесите данные из JSON в D1 (один раз):
+   ```bash
+   npm run migrate:d1
+   npx wrangler d1 execute artway-db --remote --file=./scripts/d1-migrate-data.sql
+   ```
+
+Скрипт `migrate:d1` читает `data/schedule.json`, `data/messages.json`, `data/reviews.json` и генерирует `scripts/d1-migrate-data.sql`. После выполнения команды `wrangler d1 execute` эти данные появятся в D1, и сайт на `*.pages.dev` будет отображать их.
 
 ## Миграции
 
@@ -135,32 +193,34 @@ echo "[]" > data/schedule.json
 Если нужно изменить структуру записей в `schedule.json`:
 
 1. **Создайте бекап:**
+
    ```bash
    cp data/schedule.json data/schedule.json.backup
    ```
 
 2. **Обновите структуру:**
    - Отредактируйте `data/schedule.json` вручную
-   - Или используйте скрипт миграции (см. ниже)
+   - Или используйте скрипт миграции (см ниже)
 
 3. **Пример скрипта миграции:**
+
    ```javascript
    // scripts/migrate.js
-   const fs = require('fs');
-   const path = require('path');
-   
-   const scheduleFile = path.join(__dirname, '../data/schedule.json');
-   const events = JSON.parse(fs.readFileSync(scheduleFile, 'utf-8'));
-   
+   const fs = require("fs");
+   const path = require("path");
+
+   const scheduleFile = path.join(__dirname, "../data/schedule.json");
+   const events = JSON.parse(fs.readFileSync(scheduleFile, "utf-8"));
+
    // Применить изменения
-   const migrated = events.map(event => ({
+   const migrated = events.map((event) => ({
      ...event,
      // Добавить новое поле или изменить существующее
-     newField: event.newField || 'default-value'
+     newField: event.newField || "default-value",
    }));
-   
+
    fs.writeFileSync(scheduleFile, JSON.stringify(migrated, null, 2));
-   console.log('Migration completed');
+   console.log("Migration completed");
    ```
 
 4. **Запустите миграцию:**
@@ -181,10 +241,10 @@ mv data/schedule.json.tmp data/schedule.json
 Или используйте Node.js скрипт:
 
 ```javascript
-const fs = require('fs');
-const events = JSON.parse(fs.readFileSync('data/schedule.json', 'utf-8'));
-const updated = events.map(e => ({ ...e, newField: '' }));
-fs.writeFileSync('data/schedule.json', JSON.stringify(updated, null, 2));
+const fs = require("fs");
+const events = JSON.parse(fs.readFileSync("data/schedule.json", "utf-8"));
+const updated = events.map((e) => ({ ...e, newField: "" }));
+fs.writeFileSync("data/schedule.json", JSON.stringify(updated, null, 2));
 ```
 
 ## Резервное копирование (Backup)
@@ -292,6 +352,7 @@ rsync -avz $BACKUP_FILE user@remote-server:/path/to/backups/
 ### Управление расписанием
 
 После входа в админку доступна страница `/admin/schedule` для:
+
 - Просмотра всех событий
 - Добавления новых событий
 - Редактирования существующих событий
@@ -300,6 +361,7 @@ rsync -avz $BACKUP_FILE user@remote-server:/path/to/backups/
 ### Безопасность
 
 ⚠️ **Важно для продакшна:**
+
 - Используйте сложный пароль (минимум 16 символов)
 - Регулярно меняйте пароль
 - Не коммитьте `.env.local` в git

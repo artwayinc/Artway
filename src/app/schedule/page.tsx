@@ -1,20 +1,45 @@
 import type { Metadata } from "next";
-import { getSchedule } from "@/lib/db";
+import { getCloudflareEnv, getStore } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
+const CURRENT_YEAR = new Date().getFullYear();
 
 export const metadata: Metadata = {
   title: "Event Schedule | Artway Fine Art Services",
   description:
-    "Upcoming art fairs and event schedule for Artway Fine Art Services.",
+    "Upcoming art fairs and event schedule for Artway Fine Art Services. Plan your fine art shipping and handling needs for major shows and exhibitions.",
+  keywords: [
+    "art fair schedule",
+    "art exhibition schedule",
+    "antique show schedule",
+    "fine art event calendar",
+    "art show logistics",
+    "exhibition shipping",
+    "shows and exhibitions",
+    "art handling for exhibitions",
+    "exhibition art transport",
+    "institutional art logistics",
+    "art logistics for galleries",
+    "art logistics for collectors",
+    "auction art shipping",
+  ],
+  alternates: {
+    canonical: "/schedule",
+  },
+  openGraph: {
+    title: "Event Schedule | Artway Fine Art Services",
+    description:
+      "Upcoming art fairs and event schedule for Artway Fine Art Services.",
+    type: "website",
+  },
 };
 
 export default async function SchedulePage() {
-  const events = await getSchedule();
+  const store = await getStore(await getCloudflareEnv());
+  const events = await store.getSchedule();
   return (
     <section className="section">
       <div className="container">
-        <h1 className="section__title">2025 Event Schedule</h1>
+        <h1 className="section__title">{CURRENT_YEAR} Event Schedule</h1>
         <div className="schedule">
           {events.map((event) => (
             <div key={event.id} className="schedule__item">
@@ -25,11 +50,14 @@ export default async function SchedulePage() {
               )}
               <div className="schedule__info">
                 {event.url ? (
-                  <p className="schedule__name">
-                    <a className="schedule__link" href={event.url} target="_blank" rel="noreferrer">
-                      {event.name}
-                    </a>
-                  </p>
+                  <a
+                    className="schedule__name schedule__link"
+                    href={event.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {event.name}
+                  </a>
                 ) : (
                   <p className="schedule__name">{event.name}</p>
                 )}

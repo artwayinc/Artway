@@ -8,7 +8,7 @@ export default function AdminSchedulePage() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ date: "", name: "", location: "", url: "" });
+  const [formData, setFormData] = useState({ date: "", name: "", location: "" });
   const router = useRouter();
 
   useEffect(() => {
@@ -58,12 +58,12 @@ export default function AdminSchedulePage() {
 
   async function handleAdd() {
     setEditingId(null);
-    setFormData({ date: "", name: "", location: "", url: "" });
+    setFormData({ date: "", name: "", location: "" });
   }
 
   async function handleEdit(event: ScheduleEvent) {
     setEditingId(event.id);
-    setFormData({ date: event.date, name: event.name, location: event.location, url: event.url || "" });
+    setFormData({ date: event.date, name: event.name, location: event.location });
   }
 
   async function handleSave() {
@@ -83,7 +83,7 @@ export default function AdminSchedulePage() {
       }
       await loadEvents();
       setEditingId(null);
-      setFormData({ date: "", name: "", location: "", url: "" });
+      setFormData({ date: "", name: "", location: "" });
     } catch (error) {
       console.error("Error saving event:", error);
       alert("Error saving event");
@@ -148,15 +148,6 @@ export default function AdminSchedulePage() {
               placeholder="Event location"
             />
           </div>
-          <div className="admin-schedule__field">
-            <label>URL</label>
-            <input
-              type="url"
-              value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              placeholder="https://example.com/event"
-            />
-          </div>
         </div>
         <div className="admin-schedule__form-actions">
           <button onClick={handleSave} className="admin-schedule__button admin-schedule__button--primary">
@@ -166,7 +157,7 @@ export default function AdminSchedulePage() {
             <button
               onClick={() => {
                 setEditingId(null);
-                setFormData({ date: "", name: "", location: "", url: "" });
+                setFormData({ date: "", name: "", location: "" });
               }}
               className="admin-schedule__button"
             >
@@ -189,11 +180,6 @@ export default function AdminSchedulePage() {
                   <div className="admin-schedule__event-name">{event.name}</div>
                   {event.location && (
                     <div className="admin-schedule__event-location">{event.location}</div>
-                  )}
-                  {event.url && (
-                    <a className="admin-schedule__event-link" href={event.url} target="_blank" rel="noreferrer">
-                      {event.url}
-                    </a>
                   )}
                 </div>
               </div>

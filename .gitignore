@@ -16,7 +16,6 @@
 # next.js
 /.next/
 /out/
-/.open-next/
 
 # production
 /build
@@ -30,7 +29,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-wrangler-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -42,10 +40,12 @@ wrangler-debug.log*
 # vercel
 .vercel
 
-# cloudflare
+# OpenNext / Cloudflare
+.open-next
 .wrangler
+backups/
+scripts/d1-migrate-data.sql
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-cloudflare-env.d.ts

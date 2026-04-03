@@ -149,6 +149,17 @@ export async function updateEvent(
   id: string,
   event: Partial<ScheduleEvent>,
 ): Promise<ScheduleEvent | null> {
+  const patch: Partial<ScheduleEvent> = {};
+  if (event.date !== undefined) {
+    patch.date = event.date;
+  }
+  if (event.name !== undefined) {
+    patch.name = event.name;
+  }
+  if (event.location !== undefined) {
+    patch.location = event.location;
+  }
+
   const db = await getD1();
   if (!db) {
     const events = getScheduleFromFile();
@@ -156,7 +167,7 @@ export async function updateEvent(
     if (index === -1) {
       return null;
     }
-    events[index] = { ...events[index], ...event };
+    events[index] = { ...events[index], ...patch };
     saveScheduleToFile(events);
     return events[index];
   }
@@ -169,7 +180,7 @@ export async function updateEvent(
 
   const next: ScheduleEvent = {
     ...current,
-    ...event,
+    ...patch,
     id: current.id,
   };
 

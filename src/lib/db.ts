@@ -1,8 +1,66 @@
 import fs from "fs";
 import path from "path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const dataDir = path.join(process.cwd(), "data");
 const scheduleFile = path.join(dataDir, "schedule.json");
+const messagesFile = path.join(dataDir, "messages.json");
+
+type D1Like = {
+  prepare: (query: string) => {
+    bind: (...values: unknown[]) => {
+      run: <T = unknown>() => Promise<{ results?: T[] }>;
+      all: <T = unknown>() => Promise<{ results?: T[] }>;
+      first: <T = unknown>() => Promise<T | null>;
+    };
+    run: <T = unknown>() => Promise<{ results?: T[] }>;
+    all: <T = unknown>() => Promise<{ results?: T[] }>;
+    first: <T = unknown>() => Promise<T | null>;
+  };
+};
+
+let d1SchemaReady = false;
+
+async function getD1(): Promise<D1Like | null> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const db = (env as { DB?: D1Like } | undefined)?.DB;
+    return db ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureD1Schema(db: D1Like): Promise<void> {
+  if (d1SchemaReady) {
+    return;
+  }
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS schedule_events (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL DEFAULT '',
+      name TEXT NOT NULL,
+      location TEXT NOT NULL DEFAULT ''
+    )
+  `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      phone_country TEXT NOT NULL DEFAULT 'US',
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      is_read INTEGER NOT NULL DEFAULT 0
+    )
+  `).run();
+
+  d1SchemaReady = true;
+}
 
 export interface ScheduleEvent {
   id: string;
@@ -11,7 +69,7 @@ export interface ScheduleEvent {
   location: string;
 }
 
-export function getSchedule(): ScheduleEvent[] {
+function getScheduleFromFile(): ScheduleEvent[] {
   try {
     if (!fs.existsSync(scheduleFile)) {
       return [];
@@ -24,7 +82,7 @@ export function getSchedule(): ScheduleEvent[] {
   }
 }
 
-export function saveSchedule(events: ScheduleEvent[]): void {
+function saveScheduleToFile(events: ScheduleEvent[]): void {
   try {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
@@ -36,43 +94,114 @@ export function saveSchedule(events: ScheduleEvent[]): void {
   }
 }
 
-export function getEventById(id: string): ScheduleEvent | null {
-  const events = getSchedule();
-  return events.find((event) => event.id === id) || null;
+export async function getSchedule(): Promise<ScheduleEvent[]> {
+  const db = await getD1();
+  if (!db) {
+    return getScheduleFromFile();
+  }
+
+  await ensureD1Schema(db);
+  const result = await db
+    .prepare("SELECT id, date, name, location FROM schedule_events ORDER BY rowid ASC")
+    .all<ScheduleEvent>();
+
+  return result.results ?? [];
 }
 
-export function addEvent(event: Omit<ScheduleEvent, "id">): ScheduleEvent {
-  const events = getSchedule();
+export async function getEventById(id: string): Promise<ScheduleEvent | null> {
+  const db = await getD1();
+  if (!db) {
+    const events = getScheduleFromFile();
+    return events.find((event) => event.id === id) || null;
+  }
+
+  await ensureD1Schema(db);
+  const row = await db
+    .prepare("SELECT id, date, name, location FROM schedule_events WHERE id = ?")
+    .bind(id)
+    .first<ScheduleEvent>();
+
+  return row ?? null;
+}
+
+export async function addEvent(event: Omit<ScheduleEvent, "id">): Promise<ScheduleEvent> {
   const newId = String(Date.now());
   const newEvent: ScheduleEvent = { ...event, id: newId };
-  events.push(newEvent);
-  saveSchedule(events);
+
+  const db = await getD1();
+  if (!db) {
+    const events = getScheduleFromFile();
+    events.push(newEvent);
+    saveScheduleToFile(events);
+    return newEvent;
+  }
+
+  await ensureD1Schema(db);
+  await db
+    .prepare("INSERT INTO schedule_events (id, date, name, location) VALUES (?, ?, ?, ?)")
+    .bind(newEvent.id, newEvent.date, newEvent.name, newEvent.location)
+    .run();
+
   return newEvent;
 }
 
-export function updateEvent(id: string, event: Partial<ScheduleEvent>): ScheduleEvent | null {
-  const events = getSchedule();
-  const index = events.findIndex((e) => e.id === id);
-  if (index === -1) {
+export async function updateEvent(
+  id: string,
+  event: Partial<ScheduleEvent>,
+): Promise<ScheduleEvent | null> {
+  const db = await getD1();
+  if (!db) {
+    const events = getScheduleFromFile();
+    const index = events.findIndex((e) => e.id === id);
+    if (index === -1) {
+      return null;
+    }
+    events[index] = { ...events[index], ...event };
+    saveScheduleToFile(events);
+    return events[index];
+  }
+
+  await ensureD1Schema(db);
+  const current = await getEventById(id);
+  if (!current) {
     return null;
   }
-  events[index] = { ...events[index], ...event };
-  saveSchedule(events);
-  return events[index];
+
+  const next: ScheduleEvent = {
+    ...current,
+    ...event,
+    id: current.id,
+  };
+
+  await db
+    .prepare("UPDATE schedule_events SET date = ?, name = ?, location = ? WHERE id = ?")
+    .bind(next.date, next.name, next.location, id)
+    .run();
+
+  return next;
 }
 
-export function deleteEvent(id: string): boolean {
-  const events = getSchedule();
-  const filtered = events.filter((e) => e.id !== id);
-  if (filtered.length === events.length) {
+export async function deleteEvent(id: string): Promise<boolean> {
+  const db = await getD1();
+  if (!db) {
+    const events = getScheduleFromFile();
+    const filtered = events.filter((e) => e.id !== id);
+    if (filtered.length === events.length) {
+      return false;
+    }
+    saveScheduleToFile(filtered);
+    return true;
+  }
+
+  await ensureD1Schema(db);
+  const found = await getEventById(id);
+  if (!found) {
     return false;
   }
-  saveSchedule(filtered);
+
+  await db.prepare("DELETE FROM schedule_events WHERE id = ?").bind(id).run();
   return true;
 }
-
-// Messages functions
-const messagesFile = path.join(dataDir, "messages.json");
 
 export interface ContactMessage {
   id: string;
@@ -86,7 +215,19 @@ export interface ContactMessage {
   read: boolean;
 }
 
-export function getMessages(): ContactMessage[] {
+type ContactMessageRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  phone_country: string;
+  subject: string;
+  message: string;
+  created_at: string;
+  is_read: number;
+};
+
+function getMessagesFromFile(): ContactMessage[] {
   try {
     if (!fs.existsSync(messagesFile)) {
       return [];
@@ -99,7 +240,7 @@ export function getMessages(): ContactMessage[] {
   }
 }
 
-export function saveMessages(messages: ContactMessage[]): void {
+function saveMessagesToFile(messages: ContactMessage[]): void {
   try {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
@@ -111,8 +252,39 @@ export function saveMessages(messages: ContactMessage[]): void {
   }
 }
 
-export function addMessage(message: Omit<ContactMessage, "id" | "createdAt" | "read">): ContactMessage {
-  const messages = getMessages();
+function mapMessageRow(row: ContactMessageRow): ContactMessage {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    phoneCountry: row.phone_country,
+    subject: row.subject,
+    message: row.message,
+    createdAt: row.created_at,
+    read: row.is_read === 1,
+  };
+}
+
+export async function getMessages(): Promise<ContactMessage[]> {
+  const db = await getD1();
+  if (!db) {
+    return getMessagesFromFile();
+  }
+
+  await ensureD1Schema(db);
+  const result = await db
+    .prepare(
+      "SELECT id, name, email, phone, phone_country, subject, message, created_at, is_read FROM contact_messages ORDER BY datetime(created_at) DESC",
+    )
+    .all<ContactMessageRow>();
+
+  return (result.results ?? []).map(mapMessageRow);
+}
+
+export async function addMessage(
+  message: Omit<ContactMessage, "id" | "createdAt" | "read">,
+): Promise<ContactMessage> {
   const newId = String(Date.now());
   const newMessage: ContactMessage = {
     ...message,
@@ -120,28 +292,89 @@ export function addMessage(message: Omit<ContactMessage, "id" | "createdAt" | "r
     createdAt: new Date().toISOString(),
     read: false,
   };
-  messages.unshift(newMessage); // Добавляем в начало
-  saveMessages(messages);
+
+  const db = await getD1();
+  if (!db) {
+    const messages = getMessagesFromFile();
+    messages.unshift(newMessage);
+    saveMessagesToFile(messages);
+    return newMessage;
+  }
+
+  await ensureD1Schema(db);
+  await db
+    .prepare(
+      "INSERT INTO contact_messages (id, name, email, phone, phone_country, subject, message, created_at, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(
+      newMessage.id,
+      newMessage.name,
+      newMessage.email,
+      newMessage.phone,
+      newMessage.phoneCountry,
+      newMessage.subject,
+      newMessage.message,
+      newMessage.createdAt,
+      0,
+    )
+    .run();
+
   return newMessage;
 }
 
-export function markMessageAsRead(id: string): boolean {
-  const messages = getMessages();
-  const index = messages.findIndex((m) => m.id === id);
-  if (index === -1) {
+export async function markMessageAsRead(id: string): Promise<boolean> {
+  const db = await getD1();
+  if (!db) {
+    const messages = getMessagesFromFile();
+    const index = messages.findIndex((m) => m.id === id);
+    if (index === -1) {
+      return false;
+    }
+    messages[index].read = true;
+    saveMessagesToFile(messages);
+    return true;
+  }
+
+  await ensureD1Schema(db);
+  const existing = await db
+    .prepare("SELECT id FROM contact_messages WHERE id = ?")
+    .bind(id)
+    .first<{ id: string }>();
+
+  if (!existing) {
     return false;
   }
-  messages[index].read = true;
-  saveMessages(messages);
+
+  await db
+    .prepare("UPDATE contact_messages SET is_read = 1 WHERE id = ?")
+    .bind(id)
+    .run();
+
   return true;
 }
 
-export function deleteMessage(id: string): boolean {
-  const messages = getMessages();
-  const filtered = messages.filter((m) => m.id !== id);
-  if (filtered.length === messages.length) {
+export async function deleteMessage(id: string): Promise<boolean> {
+  const db = await getD1();
+  if (!db) {
+    const messages = getMessagesFromFile();
+    const filtered = messages.filter((m) => m.id !== id);
+    if (filtered.length === messages.length) {
+      return false;
+    }
+    saveMessagesToFile(filtered);
+    return true;
+  }
+
+  await ensureD1Schema(db);
+  const existing = await db
+    .prepare("SELECT id FROM contact_messages WHERE id = ?")
+    .bind(id)
+    .first<{ id: string }>();
+
+  if (!existing) {
     return false;
   }
-  saveMessages(filtered);
+
+  await db.prepare("DELETE FROM contact_messages WHERE id = ?").bind(id).run();
   return true;
 }

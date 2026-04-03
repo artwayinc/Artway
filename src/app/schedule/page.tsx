@@ -7,8 +7,8 @@ export const metadata: Metadata = {
     "Upcoming art fairs and event schedule for Artway Fine Art Services.",
 };
 
-export default function SchedulePage() {
-  const events = getSchedule();
+export default async function SchedulePage() {
+  const events = await getSchedule();
   return (
     <section className="section">
       <div className="container">

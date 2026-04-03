@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
   // Сохраняем сообщение в БД
   try {
-    addMessage({
+    await addMessage({
       name: nameValue,
       email: emailValue,
       phone: phoneNumber,

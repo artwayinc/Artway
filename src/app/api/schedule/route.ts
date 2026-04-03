@@ -8,7 +8,7 @@ import {
 } from "@/lib/db";
 
 export async function GET() {
-  const events = getSchedule();
+  const events = await getSchedule();
   return NextResponse.json(events);
 }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newEvent = addEvent({ date: date || "", name, location: location || "" });
+    const newEvent = await addEvent({ date: date || "", name, location: location || "" });
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const updated = updateEvent(id, { date, name, location });
+    const updated = await updateEvent(id, { date, name, location });
     if (!updated) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const deleted = deleteEvent(id);
+    const deleted = await deleteEvent(id);
     if (!deleted) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }

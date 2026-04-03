@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const messages = getMessages();
+  const messages = await getMessages();
   return NextResponse.json(messages);
 }
 
@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (read !== undefined) {
-      const updated = markMessageAsRead(id);
+      const updated = await markMessageAsRead(id);
       if (!updated) {
         return NextResponse.json({ error: "Message not found" }, { status: 404 });
       }
@@ -57,7 +57,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const deleted = deleteMessage(id);
+    const deleted = await deleteMessage(id);
     if (!deleted) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }

@@ -1,22 +1,18 @@
 #!/bin/bash
-# Скрипт для автоматического бекапа schedule.json
+# D1 backup script: exports remote DB to SQL file and removes old backups.
 
-BACKUP_DIR="./backups"
+set -euo pipefail
+
+BACKUP_DIR="./backups/d1"
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/schedule_$DATE.json"
+DB_NAME="${DB_NAME:-artway-db}"
+BACKUP_FILE="$BACKUP_DIR/${DB_NAME}_$DATE.sql"
 
-# Создать папку для бекапов если её нет
-mkdir -p $BACKUP_DIR
+mkdir -p "$BACKUP_DIR"
 
-# Создать бекап
-if [ -f "data/schedule.json" ]; then
-  cp data/schedule.json $BACKUP_FILE
-  echo "Backup created: $BACKUP_FILE"
-  
-  # Удалить бекапы старше 30 дней
-  find $BACKUP_DIR -name "schedule_*.json" -mtime +30 -delete
-  echo "Old backups cleaned (older than 30 days)"
-else
-  echo "Error: data/schedule.json not found"
-  exit 1
-fi
+echo "Exporting D1 database '$DB_NAME' to $BACKUP_FILE"
+npx wrangler d1 export "$DB_NAME" --remote --output "$BACKUP_FILE"
+
+find "$BACKUP_DIR" -name "${DB_NAME}_*.sql" -mtime +30 -delete
+echo "Backup created: $BACKUP_FILE"
+echo "Old backups cleaned (older than 30 days)"

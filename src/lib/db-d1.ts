@@ -25,6 +25,26 @@ export interface D1Result<T = unknown> {
   meta: { changes: number; last_row_id: number };
 }
 
+let schemaReady: Promise<void> | null = null;
+
+async function ensureSchema(db: D1Database): Promise<void> {
+  if (!schemaReady) {
+    schemaReady = (async () => {
+      await db.prepare(
+        "CREATE TABLE IF NOT EXISTS schedule (id TEXT PRIMARY KEY, date TEXT NOT NULL DEFAULT '', name TEXT NOT NULL, location TEXT NOT NULL DEFAULT '', url TEXT, sort_order INTEGER NOT NULL DEFAULT 0)",
+      ).run();
+      await db.prepare(
+        "CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL, phone_country TEXT NOT NULL DEFAULT 'US', subject TEXT NOT NULL, message TEXT NOT NULL, created_at TEXT NOT NULL, read INTEGER NOT NULL DEFAULT 0)",
+      ).run();
+      await db.prepare(
+        "CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, rating INTEGER NOT NULL, title TEXT NOT NULL, text TEXT NOT NULL, author TEXT NOT NULL, role TEXT NOT NULL DEFAULT '', location TEXT NOT NULL DEFAULT '', image TEXT, sort_order INTEGER NOT NULL DEFAULT 0)",
+      ).run();
+    })();
+  }
+
+  await schemaReady;
+}
+
 function getDbFromEnv(env: unknown): D1Database | null {
   if (!env || typeof env !== "object") return null;
   const e = env as Record<string, unknown>;
@@ -45,10 +65,12 @@ export function createD1Store(env: unknown) {
   return {
     // Schedule
     async getSchedule(): Promise<ScheduleEvent[]> {
+      await ensureSchema(db);
       const r = await db.prepare("SELECT id, date, name, location, url, sort_order FROM schedule ORDER BY sort_order ASC, id ASC").all<ScheduleEventRow>();
       return (r.results ?? []).map(rowToSchedule);
     },
     async saveSchedule(events: ScheduleEvent[]): Promise<void> {
+      await ensureSchema(db);
       await db.batch(
         events.map((e, i) =>
           db
@@ -60,19 +82,22 @@ export function createD1Store(env: unknown) {
       );
     },
     async getEventById(id: string): Promise<ScheduleEvent | null> {
+      await ensureSchema(db);
       const row = await db.prepare("SELECT id, date, name, location, url FROM schedule WHERE id = ?").bind(id).first<ScheduleEventRow>();
       return row ? rowToSchedule(row) : null;
     },
     async addEvent(event: Omit<ScheduleEvent, "id">): Promise<ScheduleEvent> {
+      await ensureSchema(db);
       const id = String(Date.now());
       const maxOrder = await db.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM schedule").first<{ n: number }>();
       const sortOrder = maxOrder?.n ?? 0;
       await db.prepare("INSERT INTO schedule (id, date, name, location, url, sort_order) VALUES (?, ?, ?, ?, ?, ?)").bind(
         id, event.date, event.name, event.location, event.url ?? null, sortOrder
-      );
+      ).run();
       return { ...event, id };
     },
     async updateEvent(id: string, event: Partial<ScheduleEvent>): Promise<ScheduleEvent | null> {
+      await ensureSchema(db);
       const cur = await db.prepare("SELECT id, date, name, location, url FROM schedule WHERE id = ?").bind(id).first<ScheduleEventRow>();
       if (!cur) return null;
       const urlVal = event.url !== undefined ? event.url : cur.url;
@@ -85,10 +110,11 @@ export function createD1Store(env: unknown) {
       };
       await db.prepare("UPDATE schedule SET date = ?, name = ?, location = ?, url = ? WHERE id = ?").bind(
         updated.date, updated.name, updated.location, urlVal ?? null, id
-      );
+      ).run();
       return updated;
     },
     async deleteEvent(id: string): Promise<boolean> {
+      await ensureSchema(db);
       const r = await db.prepare("DELETE FROM schedule WHERE id = ?").bind(id).run();
       return r.meta.changes > 0;
     },
@@ -110,6 +136,7 @@ export function createD1Store(env: unknown) {
 
     // Messages
     async getMessages(): Promise<ContactMessage[]> {
+      await ensureSchema(db);
       const r = await db.prepare("SELECT id, name, email, phone, phone_country, subject, message, created_at, read FROM messages ORDER BY created_at DESC").all<ContactMessageRow>();
       return (r.results ?? []).map(rowToMessage);
     },
@@ -117,24 +144,28 @@ export function createD1Store(env: unknown) {
       // D1 is the source of truth; no-op for compatibility
     },
     async addMessage(message: Omit<ContactMessage, "id" | "createdAt" | "read">): Promise<ContactMessage> {
+      await ensureSchema(db);
       const id = String(Date.now());
       const createdAt = new Date().toISOString();
       await db.prepare(
         "INSERT INTO messages (id, name, email, phone, phone_country, subject, message, created_at, read) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)"
-      ).bind(id, message.name, message.email, message.phone, message.phoneCountry, message.subject, message.message, createdAt);
+      ).bind(id, message.name, message.email, message.phone, message.phoneCountry, message.subject, message.message, createdAt).run();
       return { ...message, id, createdAt, read: false };
     },
     async markMessageAsRead(id: string): Promise<boolean> {
+      await ensureSchema(db);
       const r = await db.prepare("UPDATE messages SET read = 1 WHERE id = ?").bind(id).run();
       return r.meta.changes > 0;
     },
     async deleteMessage(id: string): Promise<boolean> {
+      await ensureSchema(db);
       const r = await db.prepare("DELETE FROM messages WHERE id = ?").bind(id).run();
       return r.meta.changes > 0;
     },
 
     // Reviews
     async getReviews(): Promise<Review[]> {
+      await ensureSchema(db);
       const r = await db.prepare("SELECT id, rating, title, text, author, role, location, image FROM reviews ORDER BY sort_order ASC, id ASC").all<ReviewRow>();
       return (r.results ?? []).map(rowToReview);
     },
@@ -142,15 +173,17 @@ export function createD1Store(env: unknown) {
       // no-op
     },
     async addReview(review: Omit<Review, "id">): Promise<Review> {
+      await ensureSchema(db);
       const id = String(Date.now());
       const maxOrder = await db.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM reviews").first<{ n: number }>();
       const sortOrder = maxOrder?.n ?? 0;
       await db.prepare(
         "INSERT INTO reviews (id, rating, title, text, author, role, location, image, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-      ).bind(id, review.rating, review.title, review.text, review.author, review.role, review.location, review.image ?? null, sortOrder);
+      ).bind(id, review.rating, review.title, review.text, review.author, review.role, review.location, review.image ?? null, sortOrder).run();
       return { ...review, id };
     },
     async updateReview(id: string, review: Partial<Review>): Promise<Review | null> {
+      await ensureSchema(db);
       const cur = await db.prepare("SELECT id, rating, title, text, author, role, location, image FROM reviews WHERE id = ?").bind(id).first<ReviewRow>();
       if (!cur) return null;
       const imageVal = review?.image !== undefined ? review.image : cur.image;
@@ -166,10 +199,11 @@ export function createD1Store(env: unknown) {
       };
       await db.prepare(
         "UPDATE reviews SET rating = ?, title = ?, text = ?, author = ?, role = ?, location = ?, image = ? WHERE id = ?"
-      ).bind(updated.rating, updated.title, updated.text, updated.author, updated.role, updated.location, imageVal ?? null, id);
+      ).bind(updated.rating, updated.title, updated.text, updated.author, updated.role, updated.location, imageVal ?? null, id).run();
       return updated;
     },
     async deleteReview(id: string): Promise<boolean> {
+      await ensureSchema(db);
       const r = await db.prepare("DELETE FROM reviews WHERE id = ?").bind(id).run();
       return r.meta.changes > 0;
     },

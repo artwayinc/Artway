@@ -26,5 +26,11 @@
     "MAIL_TO": "info@artwayinc.com",
     "NEXT_PUBLIC_SITE_URL": "https://artwayinc.com",
     "SMTP_USER": "artwayinc.info@gmail.com"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "www.artwayinc.com/*",
+      "zone_name": "artwayinc.com"
+    }
+  ]
 }

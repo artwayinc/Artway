@@ -42,6 +42,8 @@ yarn-error.log*
 
 # OpenNext / Cloudflare
 .open-next
+.wrangler
+backups/
 scripts/d1-migrate-data.sql
 
 # typescript

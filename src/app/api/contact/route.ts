@@ -185,7 +185,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error sending email:", error);
-    throw error;
+    return NextResponse.json(
+      { error: "Email delivery is temporarily unavailable." },
+      { status: 502 }
+    );
   }
 
   return NextResponse.json({ ok: true });

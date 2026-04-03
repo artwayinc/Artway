@@ -21,23 +21,40 @@ type D1Like = {
 
 let d1SchemaReady = false;
 
+function isCloudflareRuntime(): boolean {
+  // In Cloudflare Workers the global caches object is the CF Cache API, not browser Cache
+  return typeof globalThis.caches !== "undefined" && !('default' in globalThis.caches);
+}
+
 async function getD1(): Promise<D1Like | null> {
+  const errors: string[] = [];
+
   try {
     const { env } = getCloudflareContext() as { env?: { DB?: D1Like } };
     if (env?.DB) {
       return env.DB;
     }
-  } catch {
-    // Ignore and continue with async context fallback.
+    errors.push("sync context: DB binding absent");
+  } catch (e) {
+    errors.push(`sync context threw: ${e}`);
   }
 
   try {
     const { env } = await getCloudflareContext({ async: true });
     const db = (env as { DB?: D1Like } | undefined)?.DB;
-    return db ?? null;
-  } catch {
-    return null;
+    if (db) {
+      return db;
+    }
+    errors.push("async context: DB binding absent");
+  } catch (e) {
+    errors.push(`async context threw: ${e}`);
   }
+
+  if (isCloudflareRuntime()) {
+    throw new Error(`D1 binding unavailable in Workers runtime. Diagnostics: ${errors.join(" | ")}`);
+  }
+
+  return null;
 }
 
 async function ensureD1Schema(db: D1Like): Promise<void> {
@@ -139,6 +156,7 @@ export async function addEvent(event: Omit<ScheduleEvent, "id">): Promise<Schedu
 
   const db = await getD1();
   if (!db) {
+    // Local dev only — Workers runtime throws before reaching here
     const events = getScheduleFromFile();
     events.push(newEvent);
     saveScheduleToFile(events);
@@ -159,23 +177,16 @@ export async function updateEvent(
   event: Partial<ScheduleEvent>,
 ): Promise<ScheduleEvent | null> {
   const patch: Partial<ScheduleEvent> = {};
-  if (event.date !== undefined) {
-    patch.date = event.date;
-  }
-  if (event.name !== undefined) {
-    patch.name = event.name;
-  }
-  if (event.location !== undefined) {
-    patch.location = event.location;
-  }
+  if (event.date !== undefined) patch.date = event.date;
+  if (event.name !== undefined) patch.name = event.name;
+  if (event.location !== undefined) patch.location = event.location;
 
   const db = await getD1();
   if (!db) {
+    // Local dev only — Workers runtime throws before reaching here
     const events = getScheduleFromFile();
     const index = events.findIndex((e) => e.id === id);
-    if (index === -1) {
-      return null;
-    }
+    if (index === -1) return null;
     events[index] = { ...events[index], ...patch };
     saveScheduleToFile(events);
     return events[index];
@@ -204,11 +215,10 @@ export async function updateEvent(
 export async function deleteEvent(id: string): Promise<boolean> {
   const db = await getD1();
   if (!db) {
+    // Local dev only — Workers runtime throws before reaching here
     const events = getScheduleFromFile();
     const filtered = events.filter((e) => e.id !== id);
-    if (filtered.length === events.length) {
-      return false;
-    }
+    if (filtered.length === events.length) return false;
     saveScheduleToFile(filtered);
     return true;
   }
@@ -315,6 +325,7 @@ export async function addMessage(
 
   const db = await getD1();
   if (!db) {
+    // Local dev only — Workers runtime throws before reaching here
     const messages = getMessagesFromFile();
     messages.unshift(newMessage);
     saveMessagesToFile(messages);
@@ -345,11 +356,10 @@ export async function addMessage(
 export async function markMessageAsRead(id: string): Promise<boolean> {
   const db = await getD1();
   if (!db) {
+    // Local dev only — Workers runtime throws before reaching here
     const messages = getMessagesFromFile();
     const index = messages.findIndex((m) => m.id === id);
-    if (index === -1) {
-      return false;
-    }
+    if (index === -1) return false;
     messages[index].read = true;
     saveMessagesToFile(messages);
     return true;
@@ -376,11 +386,10 @@ export async function markMessageAsRead(id: string): Promise<boolean> {
 export async function deleteMessage(id: string): Promise<boolean> {
   const db = await getD1();
   if (!db) {
+    // Local dev only — Workers runtime throws before reaching here
     const messages = getMessagesFromFile();
     const filtered = messages.filter((m) => m.id !== id);
-    if (filtered.length === messages.length) {
-      return false;
-    }
+    if (filtered.length === messages.length) return false;
     saveMessagesToFile(filtered);
     return true;
   }

@@ -409,6 +409,19 @@ html[data-theme="dark"] .logo {
   font-weight: 600;
 }
 
+.schedule__link {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.18em;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.schedule__link:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
 .schedule__location {
   color: var(--muted);
 }
@@ -932,6 +945,13 @@ html[data-theme="dark"] .logo {
 .admin-schedule__event-location {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.admin-schedule__event-link {
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  word-break: break-all;
 }
 
 .admin-schedule__event-actions {

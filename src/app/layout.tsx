@@ -56,8 +56,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${lato.variable} ${playfair.variable}`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${lato.variable} ${playfair.variable}`} suppressHydrationWarning>
         <div className="site">
           <SiteHeader />
           <main className="main">

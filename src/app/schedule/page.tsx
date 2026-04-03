@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getSchedule } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Event Schedule | Artway Fine Art Services",
   description:
@@ -22,7 +24,15 @@ export default async function SchedulePage() {
                 <span className="schedule__date schedule__date--empty">—</span>
               )}
               <div className="schedule__info">
-                <p className="schedule__name">{event.name}</p>
+                {event.url ? (
+                  <p className="schedule__name">
+                    <a className="schedule__link" href={event.url} target="_blank" rel="noreferrer">
+                      {event.name}
+                    </a>
+                  </p>
+                ) : (
+                  <p className="schedule__name">{event.name}</p>
+                )}
                 {event.location ? (
                   <p className="schedule__location">{event.location}</p>
                 ) : null}

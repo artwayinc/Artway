@@ -80,7 +80,7 @@ function ScheduleTab() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ date: "", name: "", location: "" });
+  const [formData, setFormData] = useState({ date: "", name: "", location: "", url: "" });
 
   useEffect(() => {
     loadEvents();
@@ -115,7 +115,7 @@ function ScheduleTab() {
       }
       await loadEvents();
       setEditingId(null);
-      setFormData({ date: "", name: "", location: "" });
+      setFormData({ date: "", name: "", location: "", url: "" });
     } catch (error) {
       console.error("Error saving event:", error);
       alert("Error saving event");
@@ -173,6 +173,15 @@ function ScheduleTab() {
               placeholder="Event location"
             />
           </div>
+          <div className="admin-schedule__field">
+            <label>URL</label>
+            <input
+              type="url"
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              placeholder="https://example.com/event"
+            />
+          </div>
         </div>
         <div className="admin-schedule__form-actions">
           <button onClick={handleSave} className="admin-schedule__button admin-schedule__button--primary">
@@ -182,7 +191,7 @@ function ScheduleTab() {
             <button
               onClick={() => {
                 setEditingId(null);
-                setFormData({ date: "", name: "", location: "" });
+                setFormData({ date: "", name: "", location: "", url: "" });
               }}
               className="admin-schedule__button"
             >
@@ -206,13 +215,18 @@ function ScheduleTab() {
                   {event.location && (
                     <div className="admin-schedule__event-location">{event.location}</div>
                   )}
+                    {event.url && (
+                      <a className="admin-schedule__event-link" href={event.url} target="_blank" rel="noreferrer">
+                        {event.url}
+                      </a>
+                    )}
                 </div>
               </div>
               <div className="admin-schedule__event-actions">
                 <button
                   onClick={() => {
                     setEditingId(event.id);
-                    setFormData({ date: event.date, name: event.name, location: event.location });
+                    setFormData({ date: event.date, name: event.name, location: event.location, url: event.url || "" });
                   }}
                   className="admin-schedule__button admin-schedule__button--small"
                 >

@@ -1,10 +1,4 @@
-import fs from "fs";
-import path from "path";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-
-const dataDir = path.join(process.cwd(), "data");
-const scheduleFile = path.join(dataDir, "schedule.json");
-const messagesFile = path.join(dataDir, "messages.json");
 
 type D1Like = {
   prepare: (query: string) => {
@@ -21,23 +15,28 @@ type D1Like = {
 
 let d1SchemaReady = false;
 
-async function getD1(): Promise<D1Like | null> {
-  // getCloudflareContext() throws when called outside Workers runtime (local dev).
-  // If it succeeds but DB is missing => we're in Workers with a misconfigured binding.
+async function getD1(): Promise<D1Like> {
+  // Prefer sync context in Workers route handlers.
   try {
     const { env } = getCloudflareContext() as { env?: { DB?: D1Like } };
     if (env?.DB) {
       return env.DB;
     }
-    throw new Error("D1 'DB' binding is not configured in wrangler.jsonc / Cloudflare dashboard");
-  } catch (e) {
-    // If the error is our own throw above, re-throw it
-    if (e instanceof Error && e.message.startsWith("D1 'DB'")) {
-      throw e;
-    }
-    // Otherwise getCloudflareContext() itself threw => local dev, use file fallback
-    return null;
+  } catch {
+    // Ignore and try async context below.
   }
+
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const db = (env as { DB?: D1Like } | undefined)?.DB;
+    if (db) {
+      return db;
+    }
+  } catch {
+    // Fall through to final explicit error.
+  }
+
+  throw new Error("D1 'DB' binding is unavailable. Use Cloudflare preview/deploy with DB binding configured.");
 }
 
 async function ensureD1Schema(db: D1Like): Promise<void> {
@@ -50,9 +49,18 @@ async function ensureD1Schema(db: D1Like): Promise<void> {
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL DEFAULT '',
       name TEXT NOT NULL,
-      location TEXT NOT NULL DEFAULT ''
+      location TEXT NOT NULL DEFAULT '',
+      url TEXT NOT NULL DEFAULT ''
     )
   `).run();
+
+  const scheduleColumns = await db
+    .prepare("PRAGMA table_info(schedule_events)")
+    .all<{ name: string }>();
+  const hasUrlColumn = (scheduleColumns.results ?? []).some((column) => column.name === "url");
+  if (!hasUrlColumn) {
+    await db.prepare("ALTER TABLE schedule_events ADD COLUMN url TEXT NOT NULL DEFAULT ''").run();
+  }
 
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS contact_messages (
@@ -76,80 +84,49 @@ export interface ScheduleEvent {
   date: string;
   name: string;
   location: string;
+  url: string;
 }
 
-function getScheduleFromFile(): ScheduleEvent[] {
-  try {
-    if (!fs.existsSync(scheduleFile)) {
-      return [];
-    }
-    const data = fs.readFileSync(scheduleFile, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading schedule:", error);
-    return [];
-  }
-}
-
-function saveScheduleToFile(events: ScheduleEvent[]): void {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    fs.writeFileSync(scheduleFile, JSON.stringify(events, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error saving schedule:", error);
-    throw error;
-  }
+function normalizeEvent(event: Partial<ScheduleEvent> & { id: string; name: string }): ScheduleEvent {
+  return {
+    id: event.id,
+    date: event.date ?? "",
+    name: event.name,
+    location: event.location ?? "",
+    url: event.url ?? "",
+  };
 }
 
 export async function getSchedule(): Promise<ScheduleEvent[]> {
   const db = await getD1();
-  if (!db) {
-    return getScheduleFromFile();
-  }
-
   await ensureD1Schema(db);
   const result = await db
-    .prepare("SELECT id, date, name, location FROM schedule_events ORDER BY rowid ASC")
+    .prepare("SELECT id, date, name, location, url FROM schedule_events ORDER BY rowid ASC")
     .all<ScheduleEvent>();
 
-  return result.results ?? [];
+  return (result.results ?? []).map((event) => normalizeEvent(event));
 }
 
 export async function getEventById(id: string): Promise<ScheduleEvent | null> {
   const db = await getD1();
-  if (!db) {
-    const events = getScheduleFromFile();
-    return events.find((event) => event.id === id) || null;
-  }
-
   await ensureD1Schema(db);
   const row = await db
-    .prepare("SELECT id, date, name, location FROM schedule_events WHERE id = ?")
+    .prepare("SELECT id, date, name, location, url FROM schedule_events WHERE id = ?")
     .bind(id)
     .first<ScheduleEvent>();
 
-  return row ?? null;
+  return row ? normalizeEvent(row) : null;
 }
 
 export async function addEvent(event: Omit<ScheduleEvent, "id">): Promise<ScheduleEvent> {
   const newId = String(Date.now());
-  const newEvent: ScheduleEvent = { ...event, id: newId };
+  const newEvent: ScheduleEvent = normalizeEvent({ ...event, id: newId, name: event.name });
 
   const db = await getD1();
-  if (!db) {
-    // Local dev only — Workers runtime throws before reaching here
-    const events = getScheduleFromFile();
-    events.push(newEvent);
-    saveScheduleToFile(events);
-    return newEvent;
-  }
-
   await ensureD1Schema(db);
   await db
-    .prepare("INSERT INTO schedule_events (id, date, name, location) VALUES (?, ?, ?, ?)")
-    .bind(newEvent.id, newEvent.date, newEvent.name, newEvent.location)
+    .prepare("INSERT INTO schedule_events (id, date, name, location, url) VALUES (?, ?, ?, ?, ?)")
+    .bind(newEvent.id, newEvent.date, newEvent.name, newEvent.location, newEvent.url)
     .run();
 
   return newEvent;
@@ -163,18 +140,9 @@ export async function updateEvent(
   if (event.date !== undefined) patch.date = event.date;
   if (event.name !== undefined) patch.name = event.name;
   if (event.location !== undefined) patch.location = event.location;
+  if (event.url !== undefined) patch.url = event.url;
 
   const db = await getD1();
-  if (!db) {
-    // Local dev only — Workers runtime throws before reaching here
-    const events = getScheduleFromFile();
-    const index = events.findIndex((e) => e.id === id);
-    if (index === -1) return null;
-    events[index] = { ...events[index], ...patch };
-    saveScheduleToFile(events);
-    return events[index];
-  }
-
   await ensureD1Schema(db);
   const current = await getEventById(id);
   if (!current) {
@@ -188,8 +156,8 @@ export async function updateEvent(
   };
 
   await db
-    .prepare("UPDATE schedule_events SET date = ?, name = ?, location = ? WHERE id = ?")
-    .bind(next.date, next.name, next.location, id)
+    .prepare("UPDATE schedule_events SET date = ?, name = ?, location = ?, url = ? WHERE id = ?")
+    .bind(next.date, next.name, next.location, next.url, id)
     .run();
 
   return next;
@@ -197,15 +165,6 @@ export async function updateEvent(
 
 export async function deleteEvent(id: string): Promise<boolean> {
   const db = await getD1();
-  if (!db) {
-    // Local dev only — Workers runtime throws before reaching here
-    const events = getScheduleFromFile();
-    const filtered = events.filter((e) => e.id !== id);
-    if (filtered.length === events.length) return false;
-    saveScheduleToFile(filtered);
-    return true;
-  }
-
   await ensureD1Schema(db);
   const found = await getEventById(id);
   if (!found) {
@@ -240,31 +199,6 @@ type ContactMessageRow = {
   is_read: number;
 };
 
-function getMessagesFromFile(): ContactMessage[] {
-  try {
-    if (!fs.existsSync(messagesFile)) {
-      return [];
-    }
-    const data = fs.readFileSync(messagesFile, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading messages:", error);
-    return [];
-  }
-}
-
-function saveMessagesToFile(messages: ContactMessage[]): void {
-  try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error saving messages:", error);
-    throw error;
-  }
-}
-
 function mapMessageRow(row: ContactMessageRow): ContactMessage {
   return {
     id: row.id,
@@ -281,10 +215,6 @@ function mapMessageRow(row: ContactMessageRow): ContactMessage {
 
 export async function getMessages(): Promise<ContactMessage[]> {
   const db = await getD1();
-  if (!db) {
-    return getMessagesFromFile();
-  }
-
   await ensureD1Schema(db);
   const result = await db
     .prepare(
@@ -307,14 +237,6 @@ export async function addMessage(
   };
 
   const db = await getD1();
-  if (!db) {
-    // Local dev only — Workers runtime throws before reaching here
-    const messages = getMessagesFromFile();
-    messages.unshift(newMessage);
-    saveMessagesToFile(messages);
-    return newMessage;
-  }
-
   await ensureD1Schema(db);
   await db
     .prepare(
@@ -338,16 +260,6 @@ export async function addMessage(
 
 export async function markMessageAsRead(id: string): Promise<boolean> {
   const db = await getD1();
-  if (!db) {
-    // Local dev only — Workers runtime throws before reaching here
-    const messages = getMessagesFromFile();
-    const index = messages.findIndex((m) => m.id === id);
-    if (index === -1) return false;
-    messages[index].read = true;
-    saveMessagesToFile(messages);
-    return true;
-  }
-
   await ensureD1Schema(db);
   const existing = await db
     .prepare("SELECT id FROM contact_messages WHERE id = ?")
@@ -368,15 +280,6 @@ export async function markMessageAsRead(id: string): Promise<boolean> {
 
 export async function deleteMessage(id: string): Promise<boolean> {
   const db = await getD1();
-  if (!db) {
-    // Local dev only — Workers runtime throws before reaching here
-    const messages = getMessagesFromFile();
-    const filtered = messages.filter((m) => m.id !== id);
-    if (filtered.length === messages.length) return false;
-    saveMessagesToFile(filtered);
-    return true;
-  }
-
   await ensureD1Schema(db);
   const existing = await db
     .prepare("SELECT id FROM contact_messages WHERE id = ?")

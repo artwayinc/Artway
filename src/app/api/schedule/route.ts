@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { date, name, location } = body;
+    const { date, name, location, url } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newEvent = await addEvent({ date: date || "", name, location: location || "" });
+    const newEvent = await addEvent({ date: date || "", name, location: location || "", url: url || "" });
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -45,13 +45,13 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, date, name, location } = body;
+    const { id, date, name, location, url } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const updated = await updateEvent(id, { date, name, location });
+    const updated = await updateEvent(id, { date, name, location, url });
     if (!updated) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }

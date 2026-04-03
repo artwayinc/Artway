@@ -21,40 +21,23 @@ type D1Like = {
 
 let d1SchemaReady = false;
 
-function isCloudflareRuntime(): boolean {
-  // In Cloudflare Workers the global caches object is the CF Cache API, not browser Cache
-  return typeof globalThis.caches !== "undefined" && !('default' in globalThis.caches);
-}
-
 async function getD1(): Promise<D1Like | null> {
-  const errors: string[] = [];
-
+  // getCloudflareContext() throws when called outside Workers runtime (local dev).
+  // If it succeeds but DB is missing => we're in Workers with a misconfigured binding.
   try {
     const { env } = getCloudflareContext() as { env?: { DB?: D1Like } };
     if (env?.DB) {
       return env.DB;
     }
-    errors.push("sync context: DB binding absent");
+    throw new Error("D1 'DB' binding is not configured in wrangler.jsonc / Cloudflare dashboard");
   } catch (e) {
-    errors.push(`sync context threw: ${e}`);
-  }
-
-  try {
-    const { env } = await getCloudflareContext({ async: true });
-    const db = (env as { DB?: D1Like } | undefined)?.DB;
-    if (db) {
-      return db;
+    // If the error is our own throw above, re-throw it
+    if (e instanceof Error && e.message.startsWith("D1 'DB'")) {
+      throw e;
     }
-    errors.push("async context: DB binding absent");
-  } catch (e) {
-    errors.push(`async context threw: ${e}`);
+    // Otherwise getCloudflareContext() itself threw => local dev, use file fallback
+    return null;
   }
-
-  if (isCloudflareRuntime()) {
-    throw new Error(`D1 binding unavailable in Workers runtime. Diagnostics: ${errors.join(" | ")}`);
-  }
-
-  return null;
 }
 
 async function ensureD1Schema(db: D1Like): Promise<void> {

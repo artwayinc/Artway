@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import path from "path";
-import fs from "fs";
 import { getCloudflareEnv, getStore } from "@/lib/db";
-
-export const runtime = "nodejs";
 
 const { SMTP_USER, SMTP_PASS, MAIL_TO } = process.env;
 
@@ -143,24 +139,11 @@ export async function POST(request: Request) {
     },
   });
 
-  // Вложения: фотографии предмета искусства (файлы из public/quote-uploads)
-  const attachments: { filename: string; content: Buffer }[] = [];
-  const publicDir = path.join(process.cwd(), "public");
-  for (let i = 0; i < artworkPhotos.length; i++) {
-    const urlPath = artworkPhotos[i].replace(/^\//, "");
-    const filePath = path.join(publicDir, urlPath);
-    if (fs.existsSync(filePath)) {
-      try {
-        const content = fs.readFileSync(filePath);
-        attachments.push({
-          filename: `artwork-photo-${i + 1}.webp`,
-          content,
-        });
-      } catch (err) {
-        console.error("Error reading attachment:", filePath, err);
-      }
-    }
-  }
+  // Добавим ссылки на фото в текст письма вместо вложений
+  const photoLinksText =
+    artworkPhotos.length > 0
+      ? `\n\nArtwork Photos:\n${artworkPhotos.map((url, i) => `${i + 1}. ${url}`).join("\n")}`
+      : "";
 
   // Сохраняем сообщение в БД (JSON на Vercel, D1 на Cloudflare)
   try {
@@ -190,28 +173,19 @@ export async function POST(request: Request) {
           return `Quote Request${extra}: ${nameValue}`.trim();
         })()
       : `Quote Request: ${subjectValue}`;
+
+    const emailBody = messageValue + photoLinksText;
+
     await transporter.sendMail({
       from: `"Artway Website" <${SMTP_USER}>`,
       to: MAIL_TO,
       replyTo: emailValue,
       subject: subjectDetails,
-      text: messageValue,
-      attachments: attachments.length > 0 ? attachments : undefined,
+      text: emailBody,
     });
-
-    // После отправки удаляем загруженные фото с диска (только в почте, в Messages не храним)
-    for (let i = 0; i < artworkPhotos.length; i++) {
-      const urlPath = artworkPhotos[i].replace(/^\//, "");
-      const filePath = path.join(process.cwd(), "public", urlPath);
-      try {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      } catch (err) {
-        console.error("Error deleting attachment after send:", filePath, err);
-      }
-    }
   } catch (error) {
     console.error("Error sending email:", error);
-    // Возвращаем успех, так как сообщение уже сохранено в БД
+    throw error;
   }
 
   return NextResponse.json({ ok: true });

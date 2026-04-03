@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
 
-const PUBLIC_DIR_NAME = "quote-uploads";
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+// File upload not supported on Cloudflare Workers (no writable filesystem)
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,36 +30,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const publicDir = path.join(process.cwd(), "public", PUBLIC_DIR_NAME);
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir, { recursive: true });
-    }
-
-    const ext =
-      file.type === "image/jpeg"
-        ? "jpg"
-        : file.type === "image/png"
-          ? "png"
-          : file.type === "image/webp"
-            ? "webp"
-            : "gif";
-    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const filename = `${unique}.${ext}`;
-    const outPath = path.join(publicDir, filename);
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    try {
-      fs.writeFileSync(outPath, buffer);
-    } catch {
-      // No writable filesystem (e.g. Cloudflare Workers)
-      return NextResponse.json(
-        { error: "Image upload not available on this deployment." },
-        { status: 503 },
-      );
-    }
-
-    const url = `/${PUBLIC_DIR_NAME}/${filename}`;
-    return NextResponse.json({ url });
+    // On Cloudflare Workers: no writable filesystem available
+    // For production use, integrate with Cloudflare R2 or external storage service
+    return NextResponse.json(
+      {
+        error:
+          "Image upload is not available. Please use image URLs instead or contact support.",
+      },
+      { status: 503 },
+    );
   } catch (err) {
     console.error("Quote upload error:", err);
     return NextResponse.json(

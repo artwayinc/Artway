@@ -23,6 +23,15 @@ let d1SchemaReady = false;
 
 async function getD1(): Promise<D1Like | null> {
   try {
+    const { env } = getCloudflareContext() as { env?: { DB?: D1Like } };
+    if (env?.DB) {
+      return env.DB;
+    }
+  } catch {
+    // Ignore and continue with async context fallback.
+  }
+
+  try {
     const { env } = await getCloudflareContext({ async: true });
     const db = (env as { DB?: D1Like } | undefined)?.DB;
     return db ?? null;

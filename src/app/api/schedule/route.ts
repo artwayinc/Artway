@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest) {
     const stack = error instanceof Error ? error.stack : undefined;
     console.error("Schedule PUT failed:", message, stack);
     return NextResponse.json(
-      { error: "Internal server error", detail: message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

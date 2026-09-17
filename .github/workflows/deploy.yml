@@ -47,7 +47,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          GITHUB_ACTIONS: true
+          STATIC_EXPORT: true
           NEXT_PUBLIC_BASE_PATH: /Artway
 
       # API routes are restored from git checkout on next run

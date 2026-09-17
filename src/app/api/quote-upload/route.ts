@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// File upload not supported on Cloudflare Workers (no writable filesystem)
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+interface R2Bucket {
+  put(key: string, value: ArrayBuffer, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+}
+
+function getBucket(env: unknown): R2Bucket | null {
+  if (!env || typeof env !== "object") return null;
+  const bucket = (env as Record<string, unknown>).QUOTE_UPLOADS;
+  if (!bucket || typeof (bucket as R2Bucket).put !== "function") return null;
+  return bucket as R2Bucket;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const { getCloudflareEnv } = await import("@/lib/db");
+    const bucket = getBucket(await getCloudflareEnv());
+    if (!bucket) {
+      return NextResponse.json(
+        { error: "Photo upload is temporarily unavailable. Please provide an artwork link instead." },
+        { status: 503 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -30,15 +49,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // On Cloudflare Workers: no writable filesystem available
-    // For production use, integrate with Cloudflare R2 or external storage service
-    return NextResponse.json(
-      {
-        error:
-          "Image upload is not available. Please use image URLs instead or contact support.",
-      },
-      { status: 503 },
-    );
+    const extension = file.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "bin";
+    const key = `quote-uploads/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${extension}`;
+    await bucket.put(key, await file.arrayBuffer(), {
+      httpMetadata: { contentType: file.type },
+    });
+
+    const url = new URL(`/api/quote-upload/${key}`, request.url).toString();
+    return NextResponse.json({ url });
   } catch (err) {
     console.error("Quote upload error:", err);
     return NextResponse.json(

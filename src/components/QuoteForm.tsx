@@ -44,6 +44,12 @@ export default function QuoteForm() {
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    if (artworkPhotos.length + files.length > 10) {
+      setStatus("error");
+      setErrorMessage("You may upload up to 10 photos.");
+      e.target.value = "";
+      return;
+    }
     setPhotoUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
@@ -97,6 +103,7 @@ export default function QuoteForm() {
       itemDescription: String(formData.get("itemDescription") ?? "").trim(),
       notes: String(formData.get("notes") ?? "").trim(),
       itemInfoMode,
+      website: String(formData.get("website") ?? "").trim(),
     };
 
     const payload =
@@ -152,6 +159,10 @@ export default function QuoteForm() {
 
   return (
     <form ref={formRef} className="form" onSubmit={handleSubmit}>
+      <label className="form__honeypot" aria-hidden="true">
+        Website
+        <input name="website" type="text" tabIndex={-1} autoComplete="off" />
+      </label>
       <div className="form__grid">
         <label className="form__field">
           <span>Full Name *</span>
@@ -170,6 +181,8 @@ export default function QuoteForm() {
           <input
             type="tel"
             name="phone"
+            required
+            minLength={14}
             value={phoneValue}
             onChange={(e) => {
               const formatted = formatPhoneNumber(e.target.value);
@@ -183,6 +196,7 @@ export default function QuoteForm() {
           <input
             type="text"
             name="from"
+            required
             autoComplete="off"
             data-lpignore
             data-form-type="other"
@@ -193,6 +207,7 @@ export default function QuoteForm() {
           <input
             type="text"
             name="to"
+            required
             autoComplete="off"
             data-lpignore
             data-form-type="other"
@@ -200,7 +215,7 @@ export default function QuoteForm() {
         </label>
         <label className="form__field form__field--full">
           <span>Item Description *</span>
-          <textarea name="itemDescription" rows={4} />
+          <textarea name="itemDescription" rows={4} required />
         </label>
 
         <div className="form__field form__field--full">
@@ -233,18 +248,21 @@ export default function QuoteForm() {
                   type="text"
                   name="dimH"
                   placeholder="H"
+                  required
                 />
                 <input
                   inputMode="decimal"
                   type="text"
                   name="dimW"
                   placeholder="W"
+                  required
                 />
                 <input
                   inputMode="decimal"
                   type="text"
                   name="dimD"
                   placeholder="D"
+                  required
                 />
                 <select
                   aria-label="Dimensions unit"
@@ -300,10 +318,11 @@ export default function QuoteForm() {
 
             <div className="form__field form__field--full">
               <span>Artwork Photos (optional)</span>
+              <small>Up to 10 photos, 10 MB each. JPEG, PNG, WebP, GIF, HEIC or HEIF.</small>
               <input
                 ref={photoInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
                 multiple
                 onChange={handlePhotoUpload}
                 disabled={photoUploading}
@@ -356,11 +375,11 @@ export default function QuoteForm() {
       </button>
       {status === "success" ? (
         <p className="form__notice form__notice--success" role="status">
-          Thanks! We will get back to you soon.
+          Thank you. Your quote request has been received by ARTWAY. We will review the details and contact you shortly. For urgent service, call (718) 213-6886.
         </p>
       ) : null}
       {status === "error" ? (
-        <p className="form__notice form__notice--error">{errorMessage}</p>
+        <p className="form__notice form__notice--error" role="alert">{errorMessage}</p>
       ) : null}
     </form>
   );

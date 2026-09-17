@@ -30,10 +30,10 @@ cp .env.example .env.local
 Заполните переменные окружения:
 
 ```env
-# Email настройки (для формы обратной связи)
-SMTP_USER=your_gmail_address@gmail.com
-SMTP_PASS=your_app_password
-MAIL_TO=your_yahoo_address@yahoo.com
+# Email settings (Resend)
+RESEND_API_KEY=re_your_api_key
+MAIL_FROM=ARTWAY Website <website@artwayinc.com>
+MAIL_TO=info@artwayinc.com
 
 # Админка
 ADMIN_USERNAME=artway-admin
@@ -41,6 +41,22 @@ ADMIN_PASSWORD=your-secure-password-here
 ```
 
 ⚠️ **Важно:** Измените `ADMIN_PASSWORD` на надежный пароль перед деплоем!
+
+For Cloudflare production, verify `artwayinc.com` in Resend, create the API key,
+and store it as an encrypted secret (never place it in `wrangler.jsonc`):
+
+```bash
+npx wrangler secret put RESEND_API_KEY
+```
+
+Create the private R2 bucket used by quote photo uploads:
+
+```bash
+npx wrangler r2 bucket create artway-quote-uploads
+```
+
+The `QUOTE_UPLOADS` binding is already declared in `wrangler.jsonc`. Configure an
+R2 lifecycle rule in Cloudflare to delete `quote-uploads/` objects after 30 days.
 
 ### Запуск в режиме разработки
 

@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 import { getCloudflareEnv, getStore } from "@/lib/db";
 
-const { SMTP_USER, SMTP_PASS, MAIL_TO } = process.env;
+function readEnv(env: unknown, key: string): string {
+  if (env && typeof env === "object") {
+    const value = (env as Record<string, unknown>)[key];
+    if (typeof value === "string") return value.trim();
+  }
+  return String(process.env[key] ?? "").trim();
+}
+
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 export async function POST(request: Request) {
-  if (!SMTP_USER || !SMTP_PASS || !MAIL_TO) {
+  const env = await getCloudflareEnv();
+  const resendApiKey = readEnv(env, "RESEND_API_KEY");
+  const mailTo = readEnv(env, "MAIL_TO");
+  const mailFrom = readEnv(env, "MAIL_FROM") || "ARTWAY Website <website@artwayinc.com>";
+
+  if (!resendApiKey || !mailTo) {
     return NextResponse.json(
       { error: "Email configuration is missing." },
       { status: 500 }
@@ -18,6 +32,10 @@ export async function POST(request: Request) {
   }
 
   const record = body as Record<string, unknown>;
+  // Honeypot: real visitors never fill this hidden field.
+  if (String(record.website ?? "").trim()) {
+    return NextResponse.json({ ok: true });
+  }
   const isLegacy =
     typeof record.subject === "string" && typeof record.message === "string";
 
@@ -44,7 +62,7 @@ export async function POST(request: Request) {
 
   const itemInfoMode = String(record.itemInfoMode ?? "manual").trim();
   const artworkPhotos = Array.isArray(record.artworkPhotos)
-    ? (record.artworkPhotos as string[])
+    ? (record.artworkPhotos as string[]).slice(0, 10)
     : [];
 
   const messageValue = (() => {
@@ -121,23 +139,30 @@ export async function POST(request: Request) {
       );
     }
   } else {
-    if (!nameValue || !emailValue) {
+    const from = String(record.from ?? "").trim();
+    const to = String(record.to ?? "").trim();
+    const itemDescription = String(record.itemDescription ?? "").trim();
+    if (!nameValue || !emailValue || !phoneNumber || !from || !to || !itemDescription) {
       return NextResponse.json(
-        { error: "Full Name and Email Address are required." },
+        { error: "Please complete all required fields." },
         { status: 400 }
       );
     }
+
+    if (itemInfoMode === "manual") {
+      const dimensions = (record.dimensions ?? {}) as Record<string, unknown>;
+      if (!String(dimensions.h ?? "").trim() || !String(dimensions.w ?? "").trim() || !String(dimensions.d ?? "").trim()) {
+        return NextResponse.json(
+          { error: "Please enter the height, width, and depth." },
+          { status: 400 }
+        );
+      }
+    }
   }
 
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-  });
+  if (!isEmail(emailValue)) {
+    return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+  }
 
   // Добавим ссылки на фото в текст письма вместо вложений
   const photoLinksText =
@@ -147,7 +172,6 @@ export async function POST(request: Request) {
 
   // Сохраняем сообщение в БД (JSON на Vercel, D1 на Cloudflare)
   try {
-    const env = await getCloudflareEnv();
     const store = await getStore(env);
     await store.addMessage({
       name: nameValue,
@@ -176,13 +200,26 @@ export async function POST(request: Request) {
 
     const emailBody = messageValue + photoLinksText;
 
-    await transporter.sendMail({
-      from: `"Artway Website" <${SMTP_USER}>`,
-      to: MAIL_TO,
-      replyTo: emailValue,
-      subject: subjectDetails,
-      text: emailBody,
+    const resendResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: mailFrom,
+        to: [mailTo],
+        reply_to: emailValue,
+        subject: subjectDetails,
+        text: emailBody,
+      }),
     });
+
+    if (!resendResponse.ok) {
+      const details = await resendResponse.text();
+      console.error("Resend delivery error:", resendResponse.status, details);
+      throw new Error("Resend rejected the email request.");
+    }
   } catch (error) {
     console.error("Error sending email:", error);
     return NextResponse.json(

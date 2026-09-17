@@ -1,0 +1,32 @@
+name: Apply ARTWAY form repair
+
+on:
+  push:
+    branches:
+      - fix/quote-form-cloudflare
+    paths:
+      - .github/workflows/apply-artway-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/quote-form-cloudflare
+      - name: Apply repair
+        run: git apply --index artway-form-repair.patch
+      - name: Remove temporary files
+        run: |
+          git rm artway-form-repair.patch
+          git rm .github/workflows/apply-artway-repair.yml
+      - name: Commit repaired form
+        run: |
+          git config user.name "ARTWAY repair"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Fix quote email delivery and photo uploads"
+          git push origin HEAD:fix/quote-form-cloudflare

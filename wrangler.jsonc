@@ -31,7 +31,7 @@
     "ADMIN_USERNAME": "artway-admin",
     "MAIL_TO": "info@artwayinc.com",
     "NEXT_PUBLIC_SITE_URL": "https://artwayinc.com",
-    "MAIL_FROM": "ARTWAY Website <website@artwayinc.com>"
+    "MAIL_FROM": "ARTWAY Website <website@mail.artwayinc.com>"
   },
   "routes": [
     {

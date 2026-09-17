@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
-const basePath = process.env.GITHUB_ACTIONS ? "/Artway" : "";
-const isStaticExport =
-  !!process.env.GITHUB_ACTIONS || process.env.STATIC_EXPORT === "true";
+const isStaticExport = process.env.STATIC_EXPORT === "true";
+const basePath = isStaticExport ? "/Artway" : "";
 
 const nextConfig: NextConfig = {
   ...(isStaticExport ? { output: "export" as const } : {}),
